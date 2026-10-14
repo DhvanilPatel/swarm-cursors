@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Acme — Swarm Cursors demo page</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; font: 15px/1.5 -apple-system, system-ui, sans-serif; color: #1d1f23; background: #f4f5f7; }
+  .shell { display: grid; grid-template-columns: 220px 1fr; height: 100%; }
+  aside { background: #16181d; color: #c9ccd3; padding: 20px 16px; }
+  aside h2 { color: #fff; font-size: 16px; margin: 0 0 16px; }
+  aside a { display: block; color: inherit; text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+  aside a.on { background: #2a2d35; color: #fff; }
+  main { overflow-y: auto; }
+  header { position: sticky; top: 0; background: rgba(255,255,255,.9); border-bottom: 1px solid #e3e5e9; padding: 14px 28px; display: flex; gap: 12px; align-items: center; z-index: 2; }
+  header input { flex: 1; max-width: 320px; padding: 8px 12px; border: 1px solid #d5d8de; border-radius: 8px; font: inherit; }
+  header button { padding: 8px 14px; border: 0; border-radius: 8px; background: #3d5afe; color: #fff; font: 600 14px system-ui; }
+  .wrap { padding: 28px; max-width: 920px; }
+  h1 { font-size: 40px; letter-spacing: -.02em; margin: 0 0 12px; }
+  .lead { color: #5b616e; font-size: 18px; }
+  figure { float: right; width: 260px; margin: 0 0 12px 20px; background: #fff; border: 1px solid #e3e5e9; border-radius: 10px; padding: 8px; }
+  figure .ph { height: 150px; border-radius: 6px; background: linear-gradient(135deg,#7f5af0,#2cb67d); }
+  figcaption { font-size: 13px; color: #6b7280; padding-top: 6px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; clear: both; margin: 24px 0; }
+  .card { background: #fff; border: 1px solid #e3e5e9; border-radius: 12px; padding: 18px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: #5b616e; font-size: 14px; }
+  .tag { display: inline-block; font: 600 11px/1 system-ui; padding: 4px 8px; border-radius: 999px; background: #eef1ff; color: #3d5afe; margin-bottom: 10px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  form { background: #fff; border: 1px solid #e3e5e9; border-radius: 12px; padding: 18px; display: grid; gap: 10px; max-width: 420px; }
+  label { display: flex; gap: 8px; align-items: center; }
+  textarea, select { font: inherit; padding: 8px; border: 1px solid #d5d8de; border-radius: 8px; }
+  .media { display: flex; gap: 16px; margin: 24px 0 400px; }
+  video, iframe { width: 300px; height: 170px; border-radius: 10px; border: 0; background: #000; }
+  .icon { width: 14px; height: 14px; display: inline-block; background: #3d5afe; -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><circle cx='5' cy='5' r='5'/></svg>") center/contain no-repeat; vertical-align: -2px; }
+</style></head>
+<body>
+<div class="shell">
+  <aside><h2>Acme</h2><a class="on" href="#">Overview</a><a href="#">Projects</a><a href="#">Agents</a><a href="#">Settings</a></aside>
+  <main>
+    <header><input placeholder="Search projects…"><button>New project</button><span class="sr">Screen reader only text</span></header>
+    <div class="wrap">
+      <h1>Overview</h1>
+      <figure><div class="ph"></div><figcaption>Floated figure: text should wrap around it.</figcaption></figure>
+      <p class="lead">This paragraph sits next to a floated figure. When rebuilt, its lines must still wrap around the figure instead of running underneath it, which needs a float shim in the clone.</p>
+      <p>A second paragraph with <strong>bold</strong>, <em>italic</em>, <a href="#">a link</a>, <code style="background:#eef0f3;padding:1px 5px;border-radius:4px">inline code</code> and an <span class="icon"></span> icon drawn with a CSS mask.</p>
+      <div class="cards">
+        <div class="card"><span class="tag">New</span><h3>Routing</h3><p>Send each task to the best agent.</p></div>
+        <div class="card"><span class="tag">Beta</span><h3>Memory</h3><p>One shared context for everyone.</p></div>
+        <div class="card"><span class="tag">GA</span><h3>Tracing</h3><p>Replay every decision.</p></div>
+        <div class="card"><span class="tag">New</span><h3>Guardrails</h3><p>Budgets and approvals by default.</p></div>
+        <div class="card"><span class="tag">GA</span><h3>Fan-out</h3><p>Hundreds of workers at once.</p></div>
+        <div class="card"><span class="tag">Beta</span><h3>Supervisors</h3><p>Retry, escalate, hand off.</p></div>
+      </div>
+      <form>
+        <input value="Ada Lovelace">
+        <textarea rows="2">Multi-line
+text area</textarea>
+        <select><option>Weekly digest</option></select>
+        <label><input type="checkbox" checked> Subscribe</label>
+        <label><input type="radio" name="r" checked> Option A <input type="radio" name="r"> Option B</label>
+      </form>
+      <div class="media">
+        <canvas id="cv" width="300" height="170" style="border-radius:10px"></canvas>
+        <iframe srcdoc="<body style='margin:0;font:600 20px system-ui;display:grid;place-items:center;height:100vh;background:#ffe8d6;color:#c2410c'>iframe content</body>"></iframe>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+  const c = document.getElementById("cv").getContext("2d");
+  const g = c.createLinearGradient(0, 0, 300, 170); g.addColorStop(0, "#ff6b6b"); g.addColorStop(1, "#4ecdc4");
+  c.fillStyle = g; c.fillRect(0, 0, 300, 170); c.fillStyle = "#fff"; c.font = "bold 22px system-ui"; c.fillText("2D canvas", 90, 92);
+</script>
+</body></html>
