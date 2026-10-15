@@ -297,7 +297,14 @@
     }
     if (tag === "video" || tag === "canvas" || (!isSvg && tag.includes("-"))) {
       let rep;
-      if (tag === "video" || tag === "canvas") {
+      const vurl = tag === "video" ? videoUrl(src) : null;
+      if (vurl) {
+        rep = document.createElement("video");
+        for (const [k, v] of [["src", vurl], ["muted", ""], ["playsinline", ""], ["preload", "auto"]]) rep.setAttribute(k, v);
+        if (!src.paused || src.autoplay) rep.setAttribute("autoplay", "");
+        if (src.loop || src.autoplay || !src.paused) rep.setAttribute("loop", "");
+        if (src.poster) rep.setAttribute("poster", src.poster);
+      } else if (tag === "video" || tag === "canvas") {
         let url = tag === "video" ? src.poster : canvasPixels(src);
         rep = document.createElement(url ? "img" : "span");
         if (url) rep.setAttribute("src", url);
@@ -413,6 +420,20 @@
     } catch (_) {
       return null;
     }
+  }
+
+  // A URL another <video> can play: the chosen source, a <source>, or a lazy-load data-src.
+  // (blob:/MediaSource streams are tied to the original element and can't be reused.)
+  function videoUrl(el) {
+    const cands = [el.currentSrc, el.getAttribute("src"), el.getAttribute("data-src")];
+    for (const s of el.querySelectorAll("source")) cands.push(s.getAttribute("src"), s.getAttribute("data-src"));
+    for (const c of cands) {
+      if (!c || /^(blob|mediasource):/i.test(c)) continue;
+      try {
+        return new URL(c, location.href).href;
+      } catch (_) {}
+    }
+    return null;
   }
 
   function canvasPixels(el) {
@@ -844,11 +865,31 @@
         m.draggable = false;
         return { el: m, sig: src.slice(0, 120) + src.length };
       };
-      if (tag === "video" || tag === "canvas" || tag === "iframe" || tag === "embed" || tag === "object") {
+      if (tag === "canvas" || tag === "iframe" || tag === "embed" || tag === "object") {
         const crop = cropShot(shot, r);
         if (crop) return imgOf(crop);
       }
       if (tag === "video") {
+        // Cross-origin video can't be read back as pixels once it's off-screen, so
+        // rebuild it as a real (muted) video in the state the original was in.
+        const crop = cropShot(shot, r);
+        const url = videoUrl(el);
+        if (url) {
+          const v = document.createElement("video");
+          v.setAttribute("src", url);
+          v.setAttribute("muted", "");
+          v.setAttribute("playsinline", "");
+          v.setAttribute("preload", "auto");
+          if (el.loop || el.autoplay || !el.paused) v.setAttribute("loop", "");
+          if (!el.paused || el.autoplay) v.setAttribute("data-play", "");
+          if (el.crossOrigin) v.setAttribute("crossorigin", el.crossOrigin);
+          if (el.currentTime > 0) v.setAttribute("data-t", String(el.currentTime));
+          const poster = crop || el.poster;
+          if (poster) v.setAttribute("poster", poster);
+          v.setAttribute("style", fit + "display:block;width:100%;height:100%;");
+          return { el: v, sig: url };
+        }
+        if (crop) return imgOf(crop);
         let src = el.poster || "";
         if (!src && el.videoWidth) {
           try {
@@ -1497,6 +1538,10 @@
 .hud button.on{background:rgba(13,153,255,.22);color:#8fd0ff}
 .hud button[hidden]{display:none}
 .hud .x{padding:7px 9px;color:#aaa}
+.hud button.snd{display:flex;align-items:center;gap:6px;padding:6px 8px}
+.hud button.snd.off{color:#8a8a8a}
+.hud button.snd.tap{background:#0D99FF;animation:hudpulse 1.6s ease-in-out infinite}
+@keyframes hudpulse{50%{box-shadow:0 0 0 4px rgba(13,153,255,.28)}}
 `;
 
   // -------------------------------------------------------------------- env
@@ -1598,6 +1643,7 @@
   <div class="bar"><i></i></div>
   <button data-a="tour" title="Auto-scroll while the swarm builds">Tour</button>
   <button data-a="speed" title="Build speed">1×</button>
+  <button data-a="sound" class="snd" title="Sound (M)"></button>
   <button data-a="live" class="pri" hidden title="Fade back to the real page">Go live</button>
   <button data-a="replay" hidden title="Wipe and rebuild again">Replay</button>
   <button data-a="close" class="x" title="Exit (Esc)">✕</button>
@@ -1814,6 +1860,12 @@
             m.classList.add("swap");
             old.replaceWith(m);
           } else n.appendChild(m);
+          if (m.localName === "video") {
+            m.muted = true;
+            const t = parseFloat(m.getAttribute("data-t"));
+            if (t > 0) m.addEventListener("loadedmetadata", () => (m.currentTime = t), { once: true });
+            if (m.hasAttribute("data-play")) m.play().catch(() => {});
+          }
           n._src = src;
           if (src.frame) {
             let fr = n.querySelector(".fr");
@@ -2121,6 +2173,25 @@
       return t.layer === "world" ? t.y : this.viewTop + t.y;
     }
 
+    // screen position of a cursor / an item (for panning and loudness)
+    scr(c) {
+      const vp = this.vp;
+      return c.sticky ? { x: c.x, y: c.y } : { x: c.x - vp.sx + vp.ox, y: c.y - vp.sy + vp.oy };
+    }
+
+    sfxPlace(kind, it, b) {
+      if (!this.sfx) return;
+      const vp = this.vp;
+      b = b || this.bounds(it);
+      let x = b.x + b.w / 2;
+      let y = b.y + b.h / 2;
+      if (!it || it.layer === "world") {
+        x += vp.ox - vp.sx;
+        y += vp.oy - vp.sy;
+      }
+      this.sfx.place(kind, x, y, b.w, b.h, vp.vw, vp.vh, (it && it.fs) || 0);
+    }
+
     start() {
       if (this.started || !this.ready) return;
       this.started = true;
@@ -2130,6 +2201,7 @@
         c.gen = null;
         c.angle = ((((c.angle + 180) % 360) + 360) % 360) - 180;
       }
+      if (this.sfx) this.sfx.start();
       if (this.onStart) this.onStart();
     }
 
@@ -2513,10 +2585,11 @@
 
     *click(c) {
       c.press = 1;
+      if (this.sfx) this.sfx.press(this.scr(c).x, this.vp.vw);
       yield* this.wait(0.07);
     }
 
-    *type(it) {
+    *type(it, c) {
       const N = it.total;
       const k = clamp(70 / Math.max(1, N), 0.06, 1);
       let budget = 0;
@@ -2532,6 +2605,7 @@
           budget -= d * k;
           i++;
         }
+        if (c && this.sfx && i > it.shown) this.sfx.key(this.scr(c).x, this.vp.vw, c.id, i - it.shown, /\s/.test(it.seq.slice(it.shown, i)) ? 1 : 0);
         it.shown = i;
         bump(it);
       }
@@ -2635,6 +2709,7 @@
       yield* this.wait(rand(0.18, 0.3));
       it.styled = true;
       bump(it);
+      this.sfxPlace(isImg ? "image" : "rect", it);
       yield* this.wait(isImg ? 0.5 : 0.35);
       c.ov = null;
       it.done = true;
@@ -2667,6 +2742,7 @@
       this.editLines.delete(it);
       it.done = true;
       bump(it);
+      this.sfxPlace("line", it);
     }
 
     *drawText(c, it, guide, grow) {
@@ -2711,18 +2787,21 @@
       c.shape = "ibeam";
       c.ov = () => [{ t: "box", b: this.bounds(it) }];
       yield* this.moveTo(c, { x: c.x + rand(-30, 10), y: c.y + rand(10, 30) }, { speed: 1.5 });
-      yield* this.type(it);
+      yield* this.type(it, c);
       yield* this.wait(0.12);
       it.editing = false;
       bump(it);
+      this.sfxPlace("text", it);
       c.shape = "arrow";
       c.ov = () => [this.selection(it)];
       if (grow) {
         const steps = [24, 32, 40, 48, 56, 64, 72, 88, 104].filter((s) => s < it.fs && s > 18);
+        let k = 0;
         for (const s of [...steps, it.fs]) {
           yield* this.wait(0.06);
           it.scale = s / it.fs;
           bump(it);
+          if (this.sfx) this.sfx.grow(k++, this.scr(c).x, this.vp.vw);
         }
         it.scale = 1;
         bump(it);
@@ -2748,11 +2827,17 @@
           let h = c.x - p.x;
           let v = c.y - p.y;
           if (guide.axis === "x" && Math.abs(h) < 9) {
-            if (h !== 0 && it.dx !== 0) guide.flash = 1;
+            if (h !== 0 && it.dx !== 0) {
+              if (guide.flash < 0.5 && this.sfx) this.sfx.snap(this.scr(c).x, this.vp.vw);
+              guide.flash = 1;
+            }
             h = 0;
           }
           if (guide.axis === "y" && Math.abs(v) < 9) {
-            if (v !== 0 && it.dy !== 0) guide.flash = 1;
+            if (v !== 0 && it.dy !== 0) {
+              if (guide.flash < 0.5 && this.sfx) this.sfx.snap(this.scr(c).x, this.vp.vw);
+              guide.flash = 1;
+            }
             v = 0;
           }
           it.dx = h;
@@ -2814,6 +2899,10 @@
         yield* this.moveTo(c, to, { speed: 0.55, drag: true, onStep: upd });
         g.cur = g.pos;
         g.dragging = false;
+        if (this.sfx) {
+          const p = this.scr(c);
+          this.sfx.place("guide", p.x, p.y, 1, 1, this.vp.vw, this.vp.vh, 0);
+        }
         c.shape = "arrow";
         yield* this.wait(0.25);
       } finally {
@@ -2875,6 +2964,7 @@
           }
         },
       });
+      this.sfxPlace("dup", dst.items[0], this.unionBounds(dst.items));
       for (const it of dst.items) {
         it.dx = 0;
         it.dy = 0;
@@ -2931,12 +3021,13 @@
       it.selAll = false;
       it.shown = 0;
       bump(it);
-      yield* this.type(it);
+      yield* this.type(it, c);
       yield* this.wait(0.12);
       it.editing = false;
       bump(it);
       c.shape = "arrow";
       c.ov = () => [this.selection(it)];
+      this.sfxPlace("edit", it);
       yield* this.wait(0.3);
       c.ov = null;
       it.done = true;
@@ -2952,10 +3043,417 @@
       yield* this.wait(rand(0.15, 0.3));
       it.mode = "own";
       bump(it);
+      this.sfxPlace(it.kind === "image" ? "image" : "restyle", it);
       yield* this.wait(0.4);
       c.ov = null;
       it.done = true;
       bump(it);
+    }
+  }
+
+  // ------------------------------------------------------------------ sound
+
+  // A glass piano in E. Every finished piece of the page plays one note of the
+  // E major pentatonic, quantized to a soft 16th-note grid, so a busy swarm comes
+  // out as a generative melody: big sections low, small things high, pitch rising
+  // left to right, panned to where the cursor is. Typing and clicks are quiet
+  // paper ticks underneath. All synthesized; no audio files.
+  const PENTA = [0, 2, 4, 7, 9]; // E F# G# B C#
+  const E2 = 40;
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  let soundPref = true;
+  const SPK_ICON = '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6v4h2.5l3.5 3V3L5 6z" fill="currentColor"/>';
+
+  class Sound {
+    constructor() {
+      this.on = soundPref;
+      this.ctx = null;
+      this.bpm = 104;
+      this.slots = new Map();
+      this.lastKey = new Map();
+      this.keyTimes = [];
+      this.pressTimes = [];
+      this.ends = []; // when each sounding piano voice dies out
+      this.fakeNow = null; // offline renders drive the clock explicitly
+    }
+
+    init(offline) {
+      if (this.ctx) return true;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = offline || new Ctx({ latencyHint: "interactive" });
+      } catch (_) {
+        return false;
+      }
+      const ctx = this.ctx;
+      const out = ctx.createGain();
+      out.gain.value = this.on ? 1 : 0;
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.knee.value = 14;
+      comp.ratio.value = 5;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.3;
+      const master = ctx.createGain();
+      master.gain.value = 0.9;
+      master.connect(comp);
+      comp.connect(out);
+      out.connect(ctx.destination);
+      const verb = ctx.createConvolver();
+      verb.buffer = this.impulse(3.2, 2.4);
+      const wet = ctx.createGain();
+      wet.gain.value = 0.5;
+      verb.connect(wet);
+      wet.connect(master);
+      this.out = out;
+      this.master = master;
+      this.verb = verb;
+      this.noiseBuf = this.noise(1.5);
+      this.t0 = this.now();
+      return true;
+    }
+
+    now() {
+      return this.fakeNow != null ? this.fakeNow : this.ctx.currentTime;
+    }
+
+    // Generated room: decaying stereo noise, darkened as it rings out.
+    impulse(secs, decay) {
+      const sr = this.ctx.sampleRate;
+      const n = Math.floor(sr * secs);
+      const b = this.ctx.createBuffer(2, n, sr);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = b.getChannelData(ch);
+        let lp = 0;
+        for (let i = 0; i < n; i++) {
+          const k = i / n;
+          const a = 0.55 - 0.4 * k; // lowpass closes over time: warm tail
+          lp += a * (Math.random() * 2 - 1 - lp);
+          d[i] = lp * Math.pow(1 - k, decay) * (i < sr * 0.012 ? i / (sr * 0.012) : 1);
+        }
+      }
+      return b;
+    }
+
+    noise(secs) {
+      const sr = this.ctx.sampleRate;
+      const b = this.ctx.createBuffer(1, Math.floor(sr * secs), sr);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      return b;
+    }
+
+    setOn(on) {
+      this.on = soundPref = on;
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      this.out.gain.cancelScheduledValues(t);
+      this.out.gain.setTargetAtTime(on ? 1 : 0, t, 0.05);
+      if (on) this.resume();
+    }
+
+    resume() {
+      if (this.ctx && this.ctx.state === "suspended" && this.ctx.resume) this.ctx.resume().catch(() => {});
+    }
+
+    get blocked() {
+      return !!this.ctx && this.ctx.state !== "running" && this.fakeNow == null;
+    }
+
+    log(fn, args) {
+      if (Array.isArray(window.__swarmSfxLog)) window.__swarmSfxLog.push({ t: performance.now() / 1000, fn, args });
+    }
+
+    ready() {
+      return this.ctx && this.on && (this.fakeNow != null || this.ctx.state === "running");
+    }
+
+    // next 16th-note on the grid (or 8th for slow, low events)
+    grid(div = 4) {
+      const step = 60 / this.bpm / div;
+      const now = this.now() + 0.015;
+      const k = Math.ceil((now - this.t0) / step);
+      return { when: this.t0 + k * step, slot: `${div}:${k}` };
+    }
+
+    pan(x, vw) {
+      return clamp((x / Math.max(1, vw)) * 1.6 - 0.8, -0.8, 0.8);
+    }
+
+    bus(when, pan, send) {
+      const g = this.ctx.createGain();
+      const p = this.ctx.createStereoPanner();
+      p.pan.setValueAtTime(pan, when);
+      g.connect(p);
+      p.connect(this.master);
+      if (send) {
+        const s = this.ctx.createGain();
+        s.gain.value = send;
+        p.connect(s);
+        s.connect(this.verb);
+      }
+      return g;
+    }
+
+    // Glass piano: a few sine partials (one inharmonic, for the glass) with a
+    // soft felt-hammer tick, long exponential ring.
+    piano(midi, when, vel, pan, ring = 2.4) {
+      const now = this.now();
+      this.ends = this.ends.filter((e) => e > now);
+      if (this.ends.length >= 28) return;
+      const ctx = this.ctx;
+      const f = mtof(midi);
+      const v = this.bus(when, pan, 0.85);
+      v.gain.value = 0.3 * vel;
+      const hi = f > 900;
+      const parts = [
+        [1, 1, 1],
+        [2, 0.38, 0.55],
+        [3, 0.12, 0.32],
+        [2.756, 0.16, 0.42],
+        [5.4, 0.05, 0.16],
+      ];
+      let last = null;
+      for (const [r, a, d] of parts) {
+        if (f * r > 15000) continue;
+        const o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.value = f * r * (1 + (Math.random() - 0.5) * 0.002);
+        const g = ctx.createGain();
+        const dec = ring * d * (hi ? 0.65 : 1);
+        g.gain.setValueAtTime(0, when);
+        g.gain.linearRampToValueAtTime(a, when + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0006, when + dec);
+        o.connect(g);
+        g.connect(v);
+        o.start(when);
+        o.stop(when + dec + 0.05);
+        last = o;
+      }
+      this.hammer(when, v, f, 0.5);
+      this.ends.push(when + ring * (hi ? 0.65 : 1));
+      if (last) last.onended = () => v.disconnect();
+    }
+
+    hammer(when, dest, f, amt) {
+      const ctx = this.ctx;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = Math.min(9000, f * 4 + 1200);
+      bp.Q.value = 1.2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(0.25 * amt, when + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.0005, when + 0.03);
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(dest);
+      src.start(when, Math.random());
+      src.stop(when + 0.05);
+    }
+
+    // short filtered-noise ticks: typing and clicks
+    tick(when, pan, freq, q, vel, len) {
+      const ctx = this.ctx;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = freq;
+      bp.Q.value = q;
+      const g = this.bus(when, pan, 0.06);
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(vel, when + 0.0008);
+      g.gain.exponentialRampToValueAtTime(0.0004, when + len);
+      src.connect(bp);
+      bp.connect(g);
+      src.start(when, Math.random() * 1.2);
+      src.stop(when + len + 0.02);
+      src.onended = () => g.disconnect();
+    }
+
+    // ---- events (screen coords in; all plain numbers so a log can be replayed)
+
+    // one mechanical key: a sharp click on top of a short "thock" (deeper for space)
+    clack(when, pan, space, vel = 1) {
+      this.tick(when, pan, rand(3600, 5600), 2.2, rand(0.2, 0.3) * vel, rand(0.006, 0.011));
+      this.tick(when + rand(0.001, 0.005), pan, space ? rand(380, 560) : rand(850, 1500), 1.6, (space ? 0.26 : rand(0.13, 0.2)) * vel, space ? 0.065 : rand(0.025, 0.042));
+    }
+
+    key(x, vw, id, n = 1, space = 0) {
+      this.log("key", [x, vw, id, n, space]);
+      if (!this.ready()) return;
+      const t = this.now();
+      if (t - (this.lastKey.get(id) || -1) < 0.024) return;
+      this.keyTimes = this.keyTimes.filter((k) => t - k < 1);
+      if (this.keyTimes.length > 80) return;
+      this.lastKey.set(id, t);
+      const pan = this.pan(x, vw);
+      // a burst of characters in one frame becomes a quick roll of keys
+      let at = t + 0.004;
+      for (let k = 0; k < Math.min(n, 3) && this.keyTimes.length <= 80; k++) {
+        this.keyTimes.push(t);
+        this.clack(at, pan, space && k === 0, rand(0.75, 1));
+        at += rand(0.018, 0.032);
+      }
+    }
+
+    // a mouse button: press click, then a lighter release
+    press(x, vw) {
+      this.log("press", [x, vw]);
+      if (!this.ready()) return;
+      const t = this.now();
+      this.pressTimes = this.pressTimes.filter((k) => t - k < 1);
+      if (this.pressTimes.length > 40) return;
+      this.pressTimes.push(t);
+      const pan = this.pan(x, vw);
+      this.tick(t + 0.004, pan, rand(2100, 2700), 4, 0.32, 0.012);
+      this.tick(t + 0.005, pan, rand(650, 850), 2, 0.16, 0.022);
+      this.tick(t + rand(0.055, 0.075), pan, rand(2900, 3400), 4, 0.15, 0.008);
+    }
+
+    // a finished element: rect, image, text, line, dup, guide, edit, restyle
+    place(kind, x, y, w, h, vw, vh, fs) {
+      this.log("place", [kind, x, y, w, h, vw, vh, fs]);
+      if (!this.ready()) return;
+      // only boxes, media, duplicates and guides sing; text and lines stay percussive
+      if (kind === "text" || kind === "edit" || kind === "line") return;
+      const area = (w * h) / Math.max(1, vw * vh);
+      let oct;
+      if (kind === "text") oct = fs >= 40 ? 2 : fs >= 22 ? 3 : 4;
+      else if (kind === "guide") oct = 5;
+      else oct = area > 0.08 ? 1 : area > 0.015 ? 2 : area > 0.002 ? 3 : 4;
+      const deg = Math.floor(clamp(x / Math.max(1, vw), 0, 0.999) * 5);
+      const midi = E2 + oct * 12 + PENTA[deg];
+      const { when, slot } = this.grid(2);
+      const seen = this.slots.get(slot) || [];
+      if (seen.length >= 1) return;
+      seen.push(midi);
+      this.slots.set(slot, seen);
+      if (this.slots.size > 64) this.slots.delete(this.slots.keys().next().value);
+      const off = y < -40 || y > vh + 40 ? 0.45 : 1;
+      const pan = this.pan(x, vw);
+      const vel = ({ rect: 0.55, image: 0.5, dup: 0.5, guide: 0.3, restyle: 0.34 }[kind] || 0.4) * 0.42;
+      const ring = oct <= 1 ? 3.6 : oct >= 4 ? 1.6 : 2.4;
+      this.piano(midi, when, vel * off, pan, ring);
+      if (kind === "image") this.piano(midi + (PENTA[(deg + 2) % 5] - PENTA[deg] + 12) % 12, when + 0.04, vel * 0.6 * off, pan, ring);
+      if (kind === "dup") this.piano(E2 + 12 + (deg % 2 ? 7 : 0), when, 0.15 * off, pan * 0.5, 2.8);
+    }
+
+    // headings stepping up in size: a little rising run
+    grow(step, x, vw) {
+      this.log("grow", [step, x, vw]);
+      if (!this.ready()) return;
+      const t = this.now() + 0.004;
+      this.tick(t, this.pan(x, vw), 2400 + step * 260, 5, 0.12, 0.01);
+    }
+
+    snap(x, vw) {
+      this.log("snap", [x, vw]);
+      if (!this.ready()) return;
+      const t = this.now() + 0.004;
+      const pan = this.pan(x, vw);
+      this.tick(t, pan, 4800, 3, 0.36, 0.012);
+      this.tick(t + 0.002, pan, 1200, 2, 0.2, 0.03);
+    }
+
+    // the page dissolving: an airy swell over a low open fifth
+    intro() {
+      this.log("intro", []);
+      if (!this.ready()) return;
+      const ctx = this.ctx;
+      const t = this.now() + 0.02;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.loop = true;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.Q.value = 0.8;
+      bp.frequency.setValueAtTime(260, t);
+      bp.frequency.exponentialRampToValueAtTime(2400, t + 0.9);
+      bp.frequency.exponentialRampToValueAtTime(900, t + 1.8);
+      const g = this.bus(t, 0, 0.6);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.16, t + 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + 2.2);
+      src.connect(bp);
+      bp.connect(g);
+      src.start(t);
+      src.stop(t + 2.3);
+      src.onended = () => g.disconnect();
+      for (const [m, d] of [[E2, 0], [E2 + 7, 0.08], [E2 + 12, 0.16]]) this.pad(m, t + 0.3 + d, 0.07, 2.6);
+    }
+
+    pad(midi, when, vel, len) {
+      const ctx = this.ctx;
+      const g = this.bus(when, 0, 0.9);
+      g.gain.setValueAtTime(0, when);
+      g.gain.linearRampToValueAtTime(vel, when + len * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.0005, when + len);
+      for (const det of [-4, 4]) {
+        const o = ctx.createOscillator();
+        o.type = "triangle";
+        o.frequency.value = mtof(midi);
+        o.detune.value = det;
+        o.connect(g);
+        o.start(when);
+        o.stop(when + len + 0.05);
+      }
+    }
+
+    // the swarm fans out: E G# B E arpeggio on the grid
+    start() {
+      this.log("start", []);
+      if (!this.ready()) return;
+      const { when } = this.grid(4);
+      const step = 60 / this.bpm / 4;
+      [E2 + 24, E2 + 28, E2 + 31, E2 + 36, E2 + 40].forEach((m, i) => this.piano(m, when + i * step, 0.2, -0.5 + i * 0.25, 2));
+    }
+
+    // the last chord rings: E major add9, strummed
+    finale() {
+      this.log("finale", []);
+      if (!this.ready()) return;
+      const { when } = this.grid(2);
+      const chord = [E2, E2 + 7, E2 + 12, E2 + 16, E2 + 19, E2 + 26, E2 + 28, E2 + 31, E2 + 36, E2 + 43];
+      chord.forEach((m, i) => this.piano(m, when + i * 0.035, 0.34 - i * 0.015, -0.6 + (i / chord.length) * 1.2, 5.5));
+      this.pad(E2 + 12, when, 0.05, 5);
+    }
+
+    // back to the real page: a falling sweep
+    release() {
+      this.log("release", []);
+      if (!this.ready()) return;
+      const ctx = this.ctx;
+      const t = this.now() + 0.01;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.loop = true;
+      const bp = ctx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.Q.value = 1;
+      bp.frequency.setValueAtTime(3000, t);
+      bp.frequency.exponentialRampToValueAtTime(220, t + 1);
+      const g = this.bus(t, 0, 0.5);
+      g.gain.setValueAtTime(0.12, t);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + 1.1);
+      src.connect(bp);
+      bp.connect(g);
+      src.start(t);
+      src.stop(t + 1.2);
+      this.piano(E2 + 12, t + 0.05, 0.3, 0, 2.5);
+    }
+
+    close(after = 0) {
+      if (!this.ctx || this.fakeNow != null) return;
+      const ctx = this.ctx;
+      const t = ctx.currentTime;
+      this.out.gain.cancelScheduledValues(t);
+      this.out.gain.setValueAtTime(this.out.gain.value, t);
+      this.out.gain.linearRampToValueAtTime(0, t + Math.max(0.05, after));
+      setTimeout(() => ctx.close().catch(() => {}), (after + 0.2) * 1000);
     }
   }
 
@@ -2996,12 +3494,17 @@
       const shotP = this.loadShot();
       this.view = new View(this.env);
       this.engine = new Engine(this.view);
+      this.sfx = new Sound();
+      this.sfx.init();
+      this.engine.sfx = this.sfx;
       this.engine.onStart = () => this.view.intro.classList.add("gone");
       this.engine.onComplete = () => this.onComplete();
       this.bind();
       this.last = performance.now();
       this.raf = requestAnimationFrame((t) => this.frame(t));
       await nextFrame();
+      this.renderSoundBtn();
+      this.sfx.intro();
       this.view.bg.classList.add("on");
       this.view.intro.classList.add("on");
       this.view.hud.classList.add("on");
@@ -3084,8 +3587,14 @@
         if (e.key === "Escape") {
           e.stopPropagation();
           stop(false);
+        } else if ((e.key === "m" || e.key === "M") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          this.sfx.setOn(!this.sfx.on);
+          this.renderSoundBtn();
         }
+        this.unlockSound();
       }, true);
+      // browsers only let audio start after a click/keypress on the page
+      on(window, "pointerdown", () => this.unlockSound(), true);
       if (!this.env.isRoot) {
         on(this.view.host, "wheel", (e) => {
           e.preventDefault();
@@ -3104,12 +3613,37 @@
           b.classList.toggle("on", this.tour);
           b.textContent = this.tour ? "Touring" : "Tour";
           if (this.tour) this.engine.start();
+        } else if (a === "sound") {
+          if (this.sfx.on && this.sfx.blocked) this.sfx.resume();
+          else this.sfx.setOn(!this.sfx.on);
+          setTimeout(() => this.renderSoundBtn(), 60);
         } else if (a === "speed") {
           this.speedIx = (this.speedIx + 1) % this.speeds.length;
           this.engine.speed = this.speeds[this.speedIx];
           b.textContent = this.speeds[this.speedIx] + "×";
         }
       });
+    }
+
+    unlockSound() {
+      if (this.dead || !this.sfx || !this.sfx.blocked) return;
+      this.sfx.resume();
+      setTimeout(() => this.renderSoundBtn(), 80);
+    }
+
+    renderSoundBtn() {
+      const b = this.view.root.querySelector('[data-a="sound"]');
+      if (!b || !this.sfx) return;
+      const tap = this.sfx.on && this.sfx.blocked;
+      const key = this.sfx.on ? (tap ? "tap" : "on") : "off";
+      if (b._k === key) return;
+      b._k = key;
+      b.classList.toggle("off", key === "off");
+      b.classList.toggle("tap", tap);
+      const waves = '<path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.6a6 6 0 0 1 0 8.8"/>';
+      const mute = '<path d="M11 6l4 4M15 6l-4 4"/>';
+      b.innerHTML = `${SPK_ICON}${key === "off" ? mute : waves}</svg>${tap ? "<span>Tap for sound</span>" : ""}`;
+      b.title = key === "off" ? "Sound off (M)" : "Sound on (M)";
     }
 
     frame(now) {
@@ -3123,6 +3657,7 @@
         if (!this._hudT || now - this._hudT > 200) {
           this._hudT = now;
           this.updateHud();
+          this.renderSoundBtn();
         }
       } catch (err) {
         console.error("[swarm-rebuild]", err);
@@ -3178,6 +3713,7 @@
 
     onComplete() {
       this.complete = true;
+      if (this.sfx) this.sfx.finale();
       const E = this.engine;
       const v = this.view;
       const workers = E.cursors.filter((c) => c.worked).length + E.retired;
@@ -3194,6 +3730,10 @@
 
     destroy(reveal) {
       unhidePage();
+      if (this.sfx) {
+        if (reveal) this.sfx.release();
+        this.sfx.close(reveal ? 1.4 : 0.25);
+      }
       const finish = () => {
         this.dead = true;
         cancelAnimationFrame(this.raf);
@@ -3263,6 +3803,7 @@
       cancelAnimationFrame(a.raf);
       for (const u of a.unbinds || []) u();
       a.view.host.remove();
+      if (a.sfx) a.sfx.close(0.1);
       // rebuild from where the first run started so screenshot crops line up again
       if (lastShot) a.env.scrollTo(lastShot.at.sy, lastShot.at.sx);
     }
@@ -3279,7 +3820,7 @@
     get app() {
       return app;
     },
-    debug: { captureModel, detectEnv },
+    debug: { captureModel, detectEnv, Sound },
   };
   start();
 })();

@@ -4,7 +4,7 @@ A Chrome extension that wipes any web page to a blank canvas and lets a swarm of
 
 ![Swarm Rebuild rebuilding a page](media/demo.gif)
 
-[Full demo video (36s)](media/demo.mp4)
+[Full demo video (36s)](media/demo.mp4) · [Demo with sound (60s)](media/demo-with-sound.mp4)
 
 ## Credit
 
@@ -30,6 +30,7 @@ It isn't on the Chrome Web Store yet, so load it unpacked:
 - **Scroll** and the swarm chases you, with more agents joining the faster you go.
 - **Tour** auto-scrolls at the pace the swarm can keep up with. Good for screen recordings.
 - **1× / 2× / 3×** changes build speed.
+- **Sound** is on by default (🔊 in the toolbar, or press **M**). If the page hasn't been clicked yet, Chrome keeps audio locked and the button says **Tap for sound**; one click anywhere starts it.
 - When it's done, the cursors flock to your mouse. **Go live** fades back to the real, clickable page; **Replay** builds it again.
 - **Esc**, **✕**, or clicking the icon again exits at any time.
 
@@ -52,6 +53,11 @@ There's a self-contained test page in [`demo/index.html`](demo/index.html) (an i
    - **guides:** Figma-style rulers slide in, a red guide is dragged out, and text snaps onto it
    - **duplicates:** select the master, ⌥-drag a copy with red spacing measurements, then retype its text, swap its image or restyle it
    - **swarm physics:** orbiting, alignment and mouse-avoiding flocking for the intro and the finale
+4. **Sound.** Synthesized live with the Web Audio API (no audio files), mostly clicky, a little musical:
+   - typing is a mechanical keyboard (a sharp click over a short thock, deeper on spaces), and every mouse press is a press-and-release click
+   - guides snap with a crisp click, and growing headings tick up in pitch
+   - boxes, images and duplicates add a sparse, quiet glass-piano note from the E major pentatonic, on an eighth-note grid: big sections play low, small things high, pitch rises left to right, and every sound is panned to its cursor
+   - an airy swell as the page dissolves, a short arpeggio as the swarm fans out, a soft E major chord when the page is done, and a falling sweep for Go live
 
 ### Files
 

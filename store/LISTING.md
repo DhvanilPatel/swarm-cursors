@@ -24,6 +24,8 @@ Copy-paste material for the [Developer Dashboard](https://chrome.google.com/webs
 > • Ruler guides dragged in, with text snapping onto them
 > • Cards, nav links and list rows ⌥-dragged into place and retyped
 >
+> With sound: a clicky-clacky soundtrack of keyboard typing and mouse clicks, with soft glass-piano notes as pieces land and a ringing chord when the page is done (press M to mute).
+>
 > Scroll and the swarm chases you, calling in more agents the faster you go. Hit Tour to auto-scroll for a perfect screen recording. When it's done, the cursors flock to your mouse and "Go live" fades back to the real page.
 >
 > Inspired by Joel Califa's "Swarm" (califa.github.io/swarm-site).

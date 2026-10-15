@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Swarm Rebuild",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Wipe any page to a blank canvas and watch a swarm of multiplayer cursors rebuild it, live.",
   "action": {
     "default_title": "Swarm Rebuild (Alt+Shift+S)",
