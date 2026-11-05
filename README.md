@@ -4,7 +4,7 @@ A Chrome extension that wipes any web page to a blank canvas and lets a swarm of
 
 ![Swarm Rebuild rebuilding a page](media/demo.gif)
 
-[Full demo video (36s)](media/demo.mp4) · [Demo with sound (60s)](media/demo-with-sound.mp4)
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/swarm-rebuild/diaeaocnhdhbknkbfbnkjikfcgokainm)** · [Full demo video (36s)](media/demo.mp4) · [Demo with sound (60s)](media/demo-with-sound.mp4)
 
 ## Credit
 
@@ -16,7 +16,9 @@ Go look at the original. It's better than this.
 
 ## Install
 
-It isn't on the Chrome Web Store yet, so load it unpacked:
+**[Add it from the Chrome Web Store](https://chromewebstore.google.com/detail/swarm-rebuild/diaeaocnhdhbknkbfbnkjikfcgokainm)**, then pin it (puzzle icon → pin).
+
+The store version can lag behind this repo while an update is in review. To run the latest code, load it unpacked:
 
 1. Clone or download this repo.
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
