@@ -3785,13 +3785,20 @@
   function start() {
     if (app) return;
     app = new App();
-    app.run().catch((err) => console.error("[swarm-rebuild]", err));
+    app.run().catch((err) => {
+      console.error("[swarm-rebuild]", err);
+      // never leave the page hidden by background.js if startup fails
+      unhidePage();
+    });
   }
 
   function stop(reveal) {
     if (!app) return;
     const a = app;
     app = null;
+    // session over: a later click must take a fresh screenshot instead of
+    // reusing this run's (Replay goes through restart(), which keeps it)
+    lastShot = null;
     a.destroy(reveal);
   }
 
