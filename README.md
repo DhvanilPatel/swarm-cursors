@@ -2,7 +2,7 @@
 
 A Chrome extension that wipes any web page to a blank canvas and lets a swarm of multiplayer cursors build it back, live: crosshair-drawn boxes, typed text, pen-tool lines, ruler guides and ⌥-drag duplicates, until the page looks just like it did before.
 
-![Swarm Rebuild rebuilding a page](media/demo.gif)
+![Swarm Rebuild rebuilding a page](media/demo.webp)
 
 **[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/swarm-rebuild/diaeaocnhdhbknkbfbnkjikfcgokainm)** · [Full demo video (36s)](media/demo.mp4) · [Demo with sound (60s)](media/demo-with-sound.mp4)
 
