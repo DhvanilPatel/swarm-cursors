@@ -639,12 +639,14 @@
           root.insertBefore(shim, root.firstChild);
         }
       }
+      // text never inherits an ancestor's mix-blend-mode: the browser blends the whole group
+      // at once, but per-item blending makes white-on-red badge text (amazon) vanish.
       const box = conv(r, ctx.layer);
       const tb = tr.width > 0 && tr.height > 0 ? conv(tr, ctx.layer) : { ...box };
       tb.x = clamp(tb.x, box.x - 4, box.x + box.w);
       tb.y = clamp(tb.y, box.y - 4, box.y + box.h);
       textItem(
-        { ...box, layer: ctx.layer, key, op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: cs.mixBlendMode !== "normal" ? cs.mixBlendMode : ctx.blend || "" },
+        { ...box, layer: ctx.layer, key, op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: cs.mixBlendMode !== "normal" ? cs.mixBlendMode : "" },
         root,
         tb,
         cs,
@@ -671,7 +673,7 @@
       if (!inDoc(box, ctx.layer)) return;
       box.w += 1;
       textItem(
-        { ...box, layer: ctx.layer, key: ctx.key(), op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: ctx.blend || "" },
+        { ...box, layer: ctx.layer, key: ctx.key(), op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: "" },
         root,
         { ...box },
         cs,
@@ -932,10 +934,22 @@
     function emitMedia(el, cs, r, ctx, key) {
       let src = el;
       let scs = cs;
+      let clip = clipFor(r, ctx.clip, ctx.layer);
       if (el.localName === "picture") {
         src = el.querySelector("img");
         if (!src) return;
         scs = css(src);
+        // the <img> can differ from its <picture> box (apple.com: a 3008px img centred in a
+        // 1440px picture, or a 46px-tall img in an inline picture whose line box is 17px).
+        // Draw it at its own size; clip to the picture only if the picture itself clips.
+        const ir = src.getBoundingClientRect();
+        if (ir.width >= 1 && ir.height >= 1 && (Math.abs(ir.width - r.width) > 1 || Math.abs(ir.height - r.height) > 1)) {
+          const clips = cs.display !== "inline" && (cs.overflowX !== "visible" || cs.overflowY !== "visible");
+          const pc = clips ? intersect(ltrb(r), ctx.clip) : ctx.clip;
+          if (!pc) return;
+          clip = clipFor(ir, pc, ctx.layer);
+          r = ir;
+        }
       }
       const m = mediaFor(src, scs, r);
       if (!m) return;
@@ -954,7 +968,7 @@
         layer: ctx.layer,
         key,
         op: ctx.op,
-        clip: clipFor(r, ctx.clip, ctx.layer),
+        clip,
         parentBox: ctx.boxItem,
         sig: m.sig,
       });
@@ -2591,7 +2605,8 @@
 
     *type(it, c) {
       const N = it.total;
-      const k = clamp(70 / Math.max(1, N), 0.06, 1);
+      // avg delay per char is ~0.026s; give short strings (badges, prices) at least ~0.55s
+      const k = Math.max(clamp(70 / Math.max(1, N), 0.06, 1), 0.55 / (0.026 * Math.max(1, N)));
       let budget = 0;
       let i = it.shown;
       while (i < N) {
@@ -2931,6 +2946,12 @@
       for (const it of dst.items) {
         it.vis = true;
         it.mode = "master";
+        // text that differs from the master travels empty and gets typed in after the drop
+        if (it.kind === "text" && it.editTask) {
+          it.mode = "own";
+          it.shown = 0;
+          it.blank = true;
+        }
         it.dx = ox;
         it.dy = oy;
         if (it.kind === "rect" || it.kind === "image") {
@@ -2970,7 +2991,7 @@
         it.dy = 0;
         it.settle = true;
         if (!it.editTask) it.mode = "own";
-        if (it.kind === "text" && it.mode === "own") it.shown = it.total;
+        if (it.kind === "text" && it.mode === "own" && !it.blank) it.shown = it.total;
         bump(it);
       }
       yield* this.wait(0.1);
@@ -3009,16 +3030,25 @@
       const b = this.bounds(it);
       yield* this.moveTo(c, { x: b.x + Math.min(b.w * 0.5, 50) + rand(-5, 5), y: b.y + Math.min(it.lh, b.h) * 0.55 });
       yield* this.click(c);
-      yield* this.wait(0.08);
-      yield* this.click(c);
-      it.selAll = true;
-      it.editing = true;
-      bump(it);
-      c.shape = "ibeam";
-      c.ov = () => [{ t: "box", b: this.bounds(it) }];
-      yield* this.wait(rand(0.2, 0.35));
+      if (it.blank) {
+        it.editing = true;
+        c.shape = "ibeam";
+        c.ov = () => [{ t: "box", b: this.bounds(it) }];
+        bump(it);
+        yield* this.wait(rand(0.12, 0.2));
+      } else {
+        yield* this.wait(0.08);
+        yield* this.click(c);
+        it.selAll = true;
+        it.editing = true;
+        bump(it);
+        c.shape = "ibeam";
+        c.ov = () => [{ t: "box", b: this.bounds(it) }];
+        yield* this.wait(rand(0.2, 0.35));
+      }
       it.mode = "own";
       it.selAll = false;
+      it.blank = false;
       it.shown = 0;
       bump(it);
       yield* this.type(it, c);
