@@ -639,12 +639,14 @@
           root.insertBefore(shim, root.firstChild);
         }
       }
+      // text never inherits an ancestor's mix-blend-mode: the browser blends the whole group
+      // at once, but per-item blending makes white-on-red badge text (amazon) vanish.
       const box = conv(r, ctx.layer);
       const tb = tr.width > 0 && tr.height > 0 ? conv(tr, ctx.layer) : { ...box };
       tb.x = clamp(tb.x, box.x - 4, box.x + box.w);
       tb.y = clamp(tb.y, box.y - 4, box.y + box.h);
       textItem(
-        { ...box, layer: ctx.layer, key, op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: cs.mixBlendMode !== "normal" ? cs.mixBlendMode : ctx.blend || "" },
+        { ...box, layer: ctx.layer, key, op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: cs.mixBlendMode !== "normal" ? cs.mixBlendMode : "" },
         root,
         tb,
         cs,
@@ -671,7 +673,7 @@
       if (!inDoc(box, ctx.layer)) return;
       box.w += 1;
       textItem(
-        { ...box, layer: ctx.layer, key: ctx.key(), op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: ctx.blend || "" },
+        { ...box, layer: ctx.layer, key: ctx.key(), op: ctx.op, clip: clipFor(r, ctx.clip, ctx.layer), parentBox: ctx.boxItem, blend: "" },
         root,
         { ...box },
         cs,
@@ -932,10 +934,22 @@
     function emitMedia(el, cs, r, ctx, key) {
       let src = el;
       let scs = cs;
+      let clip = clipFor(r, ctx.clip, ctx.layer);
       if (el.localName === "picture") {
         src = el.querySelector("img");
         if (!src) return;
         scs = css(src);
+        // the <img> can differ from its <picture> box (apple.com: a 3008px img centred in a
+        // 1440px picture, or a 46px-tall img in an inline picture whose line box is 17px).
+        // Draw it at its own size; clip to the picture only if the picture itself clips.
+        const ir = src.getBoundingClientRect();
+        if (ir.width >= 1 && ir.height >= 1 && (Math.abs(ir.width - r.width) > 1 || Math.abs(ir.height - r.height) > 1)) {
+          const clips = cs.display !== "inline" && (cs.overflowX !== "visible" || cs.overflowY !== "visible");
+          const pc = clips ? intersect(ltrb(r), ctx.clip) : ctx.clip;
+          if (!pc) return;
+          clip = clipFor(ir, pc, ctx.layer);
+          r = ir;
+        }
       }
       const m = mediaFor(src, scs, r);
       if (!m) return;
@@ -954,7 +968,7 @@
         layer: ctx.layer,
         key,
         op: ctx.op,
-        clip: clipFor(r, ctx.clip, ctx.layer),
+        clip,
         parentBox: ctx.boxItem,
         sig: m.sig,
       });
