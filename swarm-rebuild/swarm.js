@@ -2605,7 +2605,8 @@
 
     *type(it, c) {
       const N = it.total;
-      const k = clamp(70 / Math.max(1, N), 0.06, 1);
+      // avg delay per char is ~0.026s; give short strings (badges, prices) at least ~0.55s
+      const k = Math.max(clamp(70 / Math.max(1, N), 0.06, 1), 0.55 / (0.026 * Math.max(1, N)));
       let budget = 0;
       let i = it.shown;
       while (i < N) {
@@ -2945,6 +2946,12 @@
       for (const it of dst.items) {
         it.vis = true;
         it.mode = "master";
+        // text that differs from the master travels empty and gets typed in after the drop
+        if (it.kind === "text" && it.editTask) {
+          it.mode = "own";
+          it.shown = 0;
+          it.blank = true;
+        }
         it.dx = ox;
         it.dy = oy;
         if (it.kind === "rect" || it.kind === "image") {
@@ -2984,7 +2991,7 @@
         it.dy = 0;
         it.settle = true;
         if (!it.editTask) it.mode = "own";
-        if (it.kind === "text" && it.mode === "own") it.shown = it.total;
+        if (it.kind === "text" && it.mode === "own" && !it.blank) it.shown = it.total;
         bump(it);
       }
       yield* this.wait(0.1);
@@ -3023,16 +3030,25 @@
       const b = this.bounds(it);
       yield* this.moveTo(c, { x: b.x + Math.min(b.w * 0.5, 50) + rand(-5, 5), y: b.y + Math.min(it.lh, b.h) * 0.55 });
       yield* this.click(c);
-      yield* this.wait(0.08);
-      yield* this.click(c);
-      it.selAll = true;
-      it.editing = true;
-      bump(it);
-      c.shape = "ibeam";
-      c.ov = () => [{ t: "box", b: this.bounds(it) }];
-      yield* this.wait(rand(0.2, 0.35));
+      if (it.blank) {
+        it.editing = true;
+        c.shape = "ibeam";
+        c.ov = () => [{ t: "box", b: this.bounds(it) }];
+        bump(it);
+        yield* this.wait(rand(0.12, 0.2));
+      } else {
+        yield* this.wait(0.08);
+        yield* this.click(c);
+        it.selAll = true;
+        it.editing = true;
+        bump(it);
+        c.shape = "ibeam";
+        c.ov = () => [{ t: "box", b: this.bounds(it) }];
+        yield* this.wait(rand(0.2, 0.35));
+      }
       it.mode = "own";
       it.selAll = false;
+      it.blank = false;
       it.shown = 0;
       bump(it);
       yield* this.type(it, c);
