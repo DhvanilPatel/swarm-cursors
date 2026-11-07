@@ -18,8 +18,14 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "background": { "service_worker": "background.js" },
+  "background": {
+    "scripts": ["background.js"],
+    "service_worker": "background.js"
+  },
   "permissions": ["activeTab", "scripting"],
+  "browser_specific_settings": {
+    "gecko": { "id": "swarm-rebuild@dhvanilpatel.dev" }
+  },
   "commands": {
     "_execute_action": {
       "suggested_key": { "default": "Alt+Shift+S", "mac": "Alt+Shift+S" },

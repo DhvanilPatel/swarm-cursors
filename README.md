@@ -25,6 +25,25 @@ The store version can lag behind this repo while an update is in review. To run 
 3. Click **Load unpacked** and choose the [`swarm-rebuild/`](swarm-rebuild) folder.
 4. Pin it (puzzle icon → pin).
 
+### Firefox and Firefox-based browsers
+
+The same [`swarm-rebuild/`](swarm-rebuild) folder is also a valid Firefox (Manifest V3) add-on — the manifest carries both `background.scripts` (Firefox's event page) and `background.service_worker` (used by Chromium), plus a build ID under `browser_specific_settings`.
+
+**Temporary load (latest code, until restart):**
+
+1. Clone or download this repo.
+2. Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…**, and pick `swarm-rebuild/manifest.json`.
+3. This works the same in Zen and other Firefox-based browsers; the icon appears next to the URL bar.
+
+**Persistent use:** Firefox/Zen only keep *signed* add-ons across restarts. `scripts/package.sh` produces an unsigned zip, so for persistent use it must first be signed — submit it on [addons.mozilla.org](https://addons.mozilla.org) (listing copy: [`store/amo/LISTING.md`](store/amo/LISTING.md)). Until that, use the temporary load above; Firefox Developer Edition and Nightly can additionally disable signature enforcement for local testing.
+
+Notes on Firefox:
+
+- The toolbar click and the **Alt+Shift+S** shortcut behave the same as in Chrome.
+- Firefox grants `captureVisibleTab` under `activeTab` (Firefox 126+), so no extra host permission is needed even for pages with video, canvases or cross-origin iframes.
+- Browser-internal pages (`about:`, the add-on store) can't be scripted in Firefox either — the icon shows the red × there, same as with `chrome://` pages in Chrome.
+- Firefox's autoplay policy, like Chrome's, keeps audio locked until the page has been clicked; the 🔊 button behaves the same.
+
 ## Use
 
 - Click the toolbar icon or press **Alt+Shift+S** on any page.
@@ -65,12 +84,13 @@ There's a self-contained test page in [`demo/index.html`](demo/index.html) (an i
 
 | Path | What it is |
 | --- | --- |
-| `swarm-rebuild/manifest.json` | Manifest V3; permissions are `activeTab` and `scripting` only |
+| `swarm-rebuild/manifest.json` | Manifest V3; permissions are `activeTab` and `scripting` only; loads in Chrome and Firefox-based browsers |
 | `swarm-rebuild/background.js` | Toolbar click → media-only screenshot → inject `swarm.js` (or toggle off) |
 | `swarm-rebuild/swarm.js` | Snapshot, renderer and swarm engine (one dependency-free content script) |
 | `demo/index.html` | Edge-case test page |
-| `store/` | Chrome Web Store listing copy, screenshots and promo tile |
-| `scripts/package.sh` | Builds the zip to upload to the Web Store |
+| `store/` | Store listing copy, screenshots and promo tile (Chrome in `store/LISTING.md`, Firefox/AMO in `store/amo/`) |
+| `scripts/package.sh` | Builds the zip to upload to the Chrome Web Store or to AMO (`dist/`) |
+| `store/amo/LISTING.md` | AMO (Firefox Add-ons) listing copy, mirroring `store/LISTING.md` for the Chrome Web Store |
 
 ## Limits
 
