@@ -35,7 +35,7 @@ The same [`swarm-rebuild/`](swarm-rebuild) folder is also a valid Firefox (Manif
 2. Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…**, and pick `swarm-rebuild/manifest.json`.
 3. This works the same in Zen and other Firefox-based browsers; the icon appears next to the URL bar.
 
-**Persistent load:** build a zip with `./scripts/package.sh` (it writes `dist/swarm-rebuild-<version>.zip`, which works as-is for both stores) and install it locally through your browser's add-on page, or submit it on [addons.mozilla.org](https://addons.mozilla.org). Listing copy for AMO is in [`store/amo/LISTING.md`](store/amo/LISTING.md).
+**Persistent use:** Firefox/Zen only keep *signed* add-ons across restarts. `scripts/package.sh` produces an unsigned zip, so for persistent use it must first be signed — submit it on [addons.mozilla.org](https://addons.mozilla.org) (listing copy: [`store/amo/LISTING.md`](store/amo/LISTING.md)). Until that, use the temporary load above; Firefox Developer Edition and Nightly can additionally disable signature enforcement for local testing.
 
 Notes on Firefox:
 
