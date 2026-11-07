@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Build the Chrome Web Store upload: dist/swarm-rebuild-<version>.zip
+# Build the store upload zip: dist/swarm-rebuild-<version>.zip
 # (manifest.json at the zip root, no repo-only files).
+# The same zip works for the Chrome Web Store and for
+# addons.mozilla.org: AMO's linter notes that background.service_worker
+# is ignored on Firefox (that's the point of the dual background keys),
+# and informational notes don't block signing.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
