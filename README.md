@@ -33,6 +33,7 @@ The store version can lag behind this repo while an update is in review. To run 
 - **Tour** auto-scrolls at the pace the swarm can keep up with. Good for screen recordings.
 - **1× / 2× / 3×** changes build speed.
 - **Sound** is on by default (🔊 in the toolbar, or press **M**). If the page hasn't been clicked yet, Chrome keeps audio locked and the button says **Tap for sound**; one click anywhere starts it.
+- **Hide** hides the toolbar for clean screen recordings (or press **H**). Move your mouse to the bottom of the screen or press **H** again to show it.
 - When it's done, the cursors flock to your mouse. **Go live** fades back to the real, clickable page; **Replay** builds it again.
 - **Esc**, **✕**, or clicking the icon again exits at any time.
 

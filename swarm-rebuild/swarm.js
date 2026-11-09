@@ -1542,6 +1542,10 @@
 .hud button.snd.off{color:#8a8a8a}
 .hud button.snd.tap{background:#0D99FF;animation:hudpulse 1.6s ease-in-out infinite}
 @keyframes hudpulse{50%{box-shadow:0 0 0 4px rgba(13,153,255,.28)}}
+.hud.hidden{opacity:0 !important;transform:translate(-50%,24px) !important;pointer-events:none !important}
+.hud-unhide{all:unset;position:absolute;left:50%;bottom:16px;transform:translate(-50%,14px);opacity:0;pointer-events:none;padding:6px 12px;background:rgba(30,30,30,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#cfcfcf;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.25),inset 0 0 0 1px rgba(255,255,255,.07);font:500 11px/1 Inter,system-ui,-apple-system,sans-serif;cursor:pointer;transition:opacity .3s ease,transform .3s ease,background .15s,color .15s;z-index:6;user-select:none;box-sizing:border-box}
+.hud-unhide:hover{background:#3a3a3a;color:#fff}
+.hud-unhide.visible{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 `;
 
   // -------------------------------------------------------------------- env
@@ -1644,10 +1648,12 @@
   <button data-a="tour" title="Auto-scroll while the swarm builds">Tour</button>
   <button data-a="speed" title="Build speed">1×</button>
   <button data-a="sound" class="snd" title="Sound (M)"></button>
+  <button data-a="hide" title="Hide controls for recording (H)">Hide</button>
   <button data-a="live" class="pri" hidden title="Fade back to the real page">Go live</button>
   <button data-a="replay" hidden title="Wipe and rebuild again">Replay</button>
   <button data-a="close" class="x" title="Exit (Esc)">✕</button>
-</div>`;
+</div>
+<button class="hud-unhide" title="Show controls (H)">Show controls</button>`;
       const $ = (s) => root.querySelector(s);
       this.bg = $(".bg");
       this.under = $(".under");
@@ -1660,6 +1666,7 @@
       this.cursorsEl = $(".cursors");
       this.rulers = $(".rulers");
       this.hud = $(".hud");
+      this.unhideBtn = $(".hud-unhide");
       this.status = $(".status");
       this.barFill = $(".bar i");
       this.dots = $(".dots");
@@ -3470,6 +3477,21 @@
       this.speedIx = 0;
       this.complete = false;
       this.timing = {};
+      this.hudHidden = false;
+    }
+
+    setHudHidden(hidden) {
+      this.hudHidden = hidden;
+      if (this.view) {
+        this.view.hud.classList.toggle("hidden", hidden);
+        if (this.view.unhideBtn) {
+          this.view.unhideBtn.classList.remove("visible");
+        }
+      }
+    }
+
+    toggleHud() {
+      this.setHudHidden(!this.hudHidden);
     }
 
     async loadShot() {
@@ -3579,6 +3601,10 @@
       }, { passive: true });
       on(window, "pointermove", (e) => {
         this.engine.mouse = { x: e.clientX, y: e.clientY };
+        if (this.hudHidden && this.view.unhideBtn) {
+          const nearBottom = e.clientY >= window.innerHeight - 44;
+          this.view.unhideBtn.classList.toggle("visible", nearBottom);
+        }
       }, { passive: true });
       on(document.documentElement, "pointerleave", () => {
         this.engine.mouse = null;
@@ -3590,6 +3616,8 @@
         } else if ((e.key === "m" || e.key === "M") && !e.metaKey && !e.ctrlKey && !e.altKey) {
           this.sfx.setOn(!this.sfx.on);
           this.renderSoundBtn();
+        } else if ((e.key === "h" || e.key === "H") && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          this.toggleHud();
         }
         this.unlockSound();
       }, true);
@@ -3601,6 +3629,9 @@
           this.env.scroller.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: "instant" });
         }, { passive: false });
       }
+      if (this.view.unhideBtn) {
+        on(this.view.unhideBtn, "click", () => this.setHudHidden(false));
+      }
       on(this.view.hud, "click", (e) => {
         const b = e.target.closest("button");
         if (!b) return;
@@ -3608,6 +3639,7 @@
         if (a === "close") stop(false);
         else if (a === "live") stop(true);
         else if (a === "replay") restart();
+        else if (a === "hide") this.setHudHidden(true);
         else if (a === "tour") {
           this.tour = !this.tour;
           b.classList.toggle("on", this.tour);
@@ -3713,6 +3745,7 @@
 
     onComplete() {
       this.complete = true;
+      if (this.hudHidden) this.setHudHidden(false);
       if (this.sfx) this.sfx.finale();
       const E = this.engine;
       const v = this.view;
