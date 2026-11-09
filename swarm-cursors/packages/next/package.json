@@ -1,0 +1,33 @@
+{
+  "name": "@swarm-cursors/next",
+  "version": "0.1.0",
+  "description": "Next.js App Router bindings for Swarm Cursors.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "pnpm exec tsc --project tsconfig.json --emitDeclarationOnly --declaration --declarationMap --outDir dist/types && pnpm exec esbuild src/index.ts --bundle --platform=browser --target=es2020 --format=esm --minify --external:react --external:swarm-cursors --sourcemap --outfile=dist/index.js && pnpm exec esbuild src/index.ts --bundle --platform=browser --target=es2020 --format=cjs --minify --external:react --external:swarm-cursors --sourcemap --outfile=dist/index.cjs",
+    "prepack": "pnpm run build",
+    "typecheck": "pnpm exec tsc --project tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@swarm-cursors/react": "workspace:*",
+    "next": ">=13.4",
+    "react": ">=18",
+    "swarm-cursors": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

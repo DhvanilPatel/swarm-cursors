@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='8' fill='%235366db'/%3E%3C/svg%3E" />
+    <title>Swarm Cursors · Vanilla example</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "swarm-cursors": "../../packages/core/dist/index.js"
+        }
+      }
+    </script>
+    <style>
+      body { margin: 0; padding: 48px; color: #20232a; background: #f2f4f8; font: 16px/1.5 system-ui, sans-serif; }
+      main { max-width: 760px; margin: auto; }
+      .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+      article { padding: 20px; border: 1px solid #dfe3eb; border-radius: 12px; background: white; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Vanilla JavaScript</h1>
+      <p>Styled text, cards and media are captured from this live DOM and rebuilt by the original swarm engine.</p>
+      <section class="cards">
+        <article><h2>Capture</h2><p>Computed styles and element geometry become a blueprint.</p></article>
+        <article><h2>Schedule</h2><p>Dependencies unlock tasks for the cursor agents.</p></article>
+        <article><h2>Rebuild</h2><p>Boxes, text, borders, and media are drawn back in.</p></article>
+      </section>
+    </main>
+    <script type="module">
+      import { createSwarm } from "swarm-cursors";
+
+      const swarm = createSwarm({
+        target: document.body,
+        cursors: { count: 24, colors: ["#ff4d4d", "#377dff", "#19c37d"] },
+        animation: { autoplay: true, speed: 1 },
+        audio: { enabled: false },
+      });
+
+      swarm.on("error", (error) => console.error("Swarm Cursors failed:", error));
+      swarm.start();
+    </script>
+  </body>
+</html>
