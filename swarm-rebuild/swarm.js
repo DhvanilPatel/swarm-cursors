@@ -3,7 +3,7 @@
  *
  * Snapshots the current page into a blueprint (boxes, text blocks, media,
  * borders, repeated components), blanks the page, then lets a swarm of
- * multiplayer cursors rebuild it on a canvas: crosshair-drawn rects, typed
+ * pig-emoji cursors rebuild it on a canvas: crosshair-drawn rects, typed
  * text, pen-tool lines, ruler guides with snapping, alt-drag duplicates.
  *
  * Injected by background.js; injecting again toggles it off.
@@ -25,10 +25,11 @@
     "Joan", "Donald", "Sophie", "Niklaus", "Anita", "Brian", "Mary", "Rob",
     "Ida", "Yukihiro", "Shafi", "Leslie", "Jean", "Vint", "Lynn", "Bram",
   ];
-  const COLORS = [
-    "#F24E1E", "#A259FF", "#1ABCFE", "#0ACF83", "#FF7262", "#FFC700",
-    "#9747FF", "#E8467C", "#14AE5C", "#0D99FF", "#FF8A00", "#00B5CE",
-  ];
+  const cursorColor = (id) => {
+    const hue = (id * 137.508) % 360;
+    const lightness = id % 2 ? 43 : 50;
+    return `hsl(${hue.toFixed(1)} 82% ${lightness}%)`;
+  };
   const BLUE = "#0D99FF";
   const RED = "#F24822";
   const RULER = 20;
@@ -73,72 +74,6 @@
   }
 
   const ltrb = (r) => ({ l: r.left, t: r.top, r: r.right, b: r.bottom });
-
-  // ----------------------------------------------------------- cursor shapes
-
-  const ARROW_D =
-    "M4.6 3.9 C4.2 3.1 4.9 2.4 5.7 2.8 L20.6 9.4 C21.5 9.8 21.4 11.1 20.4 11.3 L13.9 12.9 C13.4 13 13 13.4 12.9 13.9 L11.3 20.4 C11.1 21.4 9.8 21.5 9.4 20.6 Z";
-  const HOT = {
-    arrow: [5, 3.5],
-    dup: [5, 3.5],
-    pen: [3, 3],
-    "pen-add": [3, 3],
-    "pen-close": [3, 3],
-    cross: [12, 12],
-    ibeam: [12, 12],
-    ew: [12, 12],
-    ns: [12, 12],
-  };
-
-  function cursorSVG(shape, c) {
-    const st = 'stroke="#fff" stroke-width="1.5" stroke-linejoin="round"';
-    switch (shape) {
-      case "arrow":
-        return `<path d="${ARROW_D}" fill="${c}" ${st}/>`;
-      case "dup":
-        return (
-          `<path d="${ARROW_D}" transform="translate(4 3.5)" fill="#fff" stroke="${c}" stroke-width="1.3" stroke-linejoin="round"/>` +
-          `<path d="${ARROW_D}" fill="${c}" ${st}/>`
-        );
-      case "pen":
-      case "pen-add":
-      case "pen-close": {
-        let s =
-          `<path d="M17.4 10.6 L20.6 13.8 L13.8 20.6 L10.6 17.4 Z" fill="${c}" ${st}/>` +
-          `<path d="M3 3 L13.1 6.3 L17.4 10.6 L10.6 17.4 L6.3 13.1 Z" fill="${c}" ${st}/>` +
-          `<path d="M3.6 3.6 L8.9 8.9" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>` +
-          `<circle cx="10.2" cy="10.2" r="1.75" fill="none" stroke="#fff" stroke-width="1.2"/>`;
-        if (shape === "pen-add")
-          s +=
-            `<g stroke-linecap="round"><path d="M23 19.5 V26.5 M19.5 23 H26.5" stroke="#fff" stroke-width="3.4"/>` +
-            `<path d="M23 19.5 V26.5 M19.5 23 H26.5" stroke="#1E1E1E" stroke-width="1.3"/></g>`;
-        if (shape === "pen-close")
-          s +=
-            `<circle cx="23" cy="23" r="2.8" fill="none" stroke="#fff" stroke-width="3.2"/>` +
-            `<circle cx="23" cy="23" r="2.8" fill="none" stroke="#1E1E1E" stroke-width="1.2"/>`;
-        return s;
-      }
-      case "cross":
-        return (
-          `<g stroke-linecap="round"><path d="M12 3.5 V20.5 M3.5 12 H20.5" stroke="#fff" stroke-width="3.6"/>` +
-          `<path d="M12 3.5 V20.5 M3.5 12 H20.5" stroke="${c}" stroke-width="1.5"/></g>`
-        );
-      case "ibeam": {
-        const d =
-          "M8.5 4.5 H10.5 Q12 4.5 12 6 Q12 4.5 13.5 4.5 H15.5 M12 6 V18 M8.5 19.5 H10.5 Q12 19.5 12 18 Q12 19.5 13.5 19.5 H15.5";
-        return (
-          `<g fill="none" stroke-linecap="round"><path d="${d}" stroke="#fff" stroke-width="3.6"/>` +
-          `<path d="${d}" stroke="${c}" stroke-width="1.5"/></g>`
-        );
-      }
-      case "ew":
-      case "ns":
-        return `<path d="M2.5 12 L7 7.5 V10.4 H17 V7.5 L21.5 12 L17 16.5 V13.6 H7 V16.5 Z"${
-          shape === "ns" ? ' transform="rotate(90 12 12)"' : ""
-        } fill="${c}" ${st}/>`;
-    }
-    return "";
-  }
 
   const IMG_ICON =
     '<svg class="ph" viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 18 L10 13 L14 16 L17 13.5 L21 17"/></svg>';
@@ -1507,8 +1442,8 @@
 .ov{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 .badges,.cursors{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .badge{position:absolute;transform:translate(-50%);padding:1px 4px;border-radius:2px;color:#fff;font:600 11px/16px Inter,system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap;font-variant-numeric:tabular-nums}
-.cursor{position:absolute;left:0;top:0;will-change:transform}
-.cursor svg{position:absolute;overflow:visible;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.28))}
+.cursor{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
+.cursor .pig{position:absolute;left:0;top:0;display:grid;place-items:center;width:30px;height:30px;margin:-15px 0 0 -15px;box-sizing:border-box;border:2px solid #fff;border-radius:50%;background:var(--cursor-color);box-shadow:0 1px 3px rgba(0,0,0,.32);font:20px/1 "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;transform-origin:center}
 .rulers{position:absolute;inset:0;pointer-events:none}
 .ruler{position:absolute;background:#2c2c2c;pointer-events:none}
 .ruler svg{display:block}
@@ -1921,26 +1856,18 @@
         if (!el) {
           el = document.createElement("div");
           el.className = "cursor";
-          el.innerHTML = '<svg width="28" height="28" viewBox="0 0 28 28"></svg>';
+          el.innerHTML = '<span class="pig" aria-hidden="true">🐷</span>';
+          el.style.setProperty("--cursor-color", c.color);
           this.cursorsEl.appendChild(el);
           this.cursorEls.set(c.id, el);
-          el._shape = "";
         }
         seen.add(c.id);
         const X = c.sticky ? c.x : c.x - vp.sx + vp.ox;
         const Y = c.sticky ? c.y : c.y - vp.sy + vp.oy;
         el.style.transform = `translate(${f1(X)}px,${f1(Y)}px)`;
-        const svg = el.firstChild;
-        if (el._shape !== c.shape) {
-          svg.innerHTML = cursorSVG(c.shape, c.color);
-          el._shape = c.shape;
-          const [hx, hy] = HOT[c.shape];
-          el._hx = hx;
-          el._hy = hy;
-          svg.style.transformOrigin = `${hx}px ${hy}px`;
-        }
+        const pig = el.firstChild;
         const s = 1 - c.press * 0.12;
-        svg.style.transform = `translate(${-el._hx}px,${-el._hy}px) rotate(${f1(c.angle)}deg) scale(${s})`;
+        pig.style.transform = `rotate(${f1(c.angle)}deg) scale(${s})`;
       }
       for (const [id, el] of this.cursorEls)
         if (!seen.has(id)) {
@@ -2148,7 +2075,7 @@
       return {
         id, x, y, home,
         name: NAMES[id % NAMES.length],
-        color: COLORS[id % COLORS.length],
+        color: cursorColor(id),
         shape: "arrow", press: 0, task: null, gen: null, ov: null,
         idleFor: 0, leaving: false, worked: false, sticky: false,
         vx: 0, vy: 0, angle: 0,
