@@ -10,6 +10,6 @@ out="$root/dist/swarm-rebuild-$version.zip"
 
 mkdir -p "$root/dist"
 rm -f "$out"
-(cd "$src" && zip -r -X -q "$out" manifest.json background.js swarm.js icons -x '*.DS_Store')
+(cd "$src" && zip -r -X -q "$out" manifest.json background.js swarm.js autoplay.js options.html options.js icons -x '*.DS_Store')
 echo "Built $out"
 unzip -l "$out"

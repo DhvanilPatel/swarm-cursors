@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Swarm Rebuild options</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1e1e1e; --muted: #6b6b6b; --line: #e3e3e3; --chip: #f2f2f2; --blue: #0d99ff; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #ececec; --muted: #9a9a9a; --line: #3a3a3a; --chip: #2c2c2c; } }
+  body { margin: 0; padding: 20px 24px 24px; min-width: 380px; max-width: 560px; font: 13px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); }
+  h1 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+  fieldset { margin: 0; padding: 0; border: 0; }
+  legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+  .opt { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
+  .opt:has(input:checked) { border-color: var(--blue); }
+  .opt input { margin: 2px 0 0; accent-color: var(--blue); }
+  .opt small { display: block; color: var(--muted); }
+  #sites { margin: -2px 0 10px 32px; }
+  #add { display: flex; gap: 6px; }
+  #host { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+  button { padding: 6px 10px; border: 0; border-radius: 6px; background: var(--chip); color: inherit; font: inherit; cursor: pointer; }
+  #add button { background: var(--blue); color: #fff; }
+  #list { list-style: none; margin: 8px 0 0; padding: 0; }
+  #list li { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  #list li:last-child { border-bottom: 0; }
+  #list .empty { color: var(--muted); }
+  .note { margin: 12px 0 0; color: var(--muted); }
+  #status { min-height: 1.45em; margin: 8px 0 0; font-weight: 500; }
+</style>
+</head>
+<body>
+<h1>Swarm Rebuild</h1>
+<fieldset>
+  <legend>When should the swarm play?</legend>
+  <label class="opt"><input type="radio" name="mode" value="off"><span>Only when I click the icon or press Alt+Shift+S<small>Default. The extension can't see any page until you click.</small></span></label>
+  <label class="opt"><input type="radio" name="mode" value="sites"><span>Automatically, on sites I choose<small>Every page you open on these sites gets rebuilt.</small></span></label>
+  <div id="sites" hidden>
+    <form id="add"><input id="host" type="text" placeholder="example.com" autocomplete="off" spellcheck="false" aria-label="Site to add"><button type="submit">Add site</button></form>
+    <ul id="list"></ul>
+  </div>
+  <label class="opt"><input type="radio" name="mode" value="all"><span>Automatically, on every site<small>Every page you open gets rebuilt.</small></span></label>
+</fieldset>
+<p class="note">Chrome asks you to allow access before automatic play can start, and switching back to “Only when I click” gives that access up. Press Esc to skip a rebuild. Nothing is collected or sent anywhere.</p>
+<p id="status" role="status"></p>
+<script src="options.js"></script>
+</body>
+</html>

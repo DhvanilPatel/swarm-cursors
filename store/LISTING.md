@@ -26,11 +26,13 @@ Copy-paste material for the [Developer Dashboard](https://chrome.google.com/webs
 >
 > With sound: a clicky-clacky soundtrack of keyboard typing and mouse clicks, with soft glass-piano notes as pieces land and a ringing chord when the page is done (press M to mute).
 >
-> Scroll and the swarm chases you, calling in more agents the faster you go. Hit Tour to auto-scroll for a perfect screen recording. When it's done, the cursors flock to your mouse and "Go live" fades back to the real page.
+> Scroll and the swarm chases you, calling in more agents the faster you go. Hit Tour to auto-scroll for a perfect screen recording, and press H to hide the toolbar. When it's done, the cursors flock to your mouse and "Go live" fades back to the real page.
+>
+> Want it on every page? Turn on automatic play in Options, for every site or just the ones you pick. It's off by default.
 >
 > Inspired by Joel Califa's "Swarm" (califa.github.io/swarm-site).
 >
-> Privacy: nothing is collected or sent anywhere. The extension only runs on the tab you click, when you click it.
+> Privacy: nothing is collected or sent anywhere. Unless you turn on automatic play, the extension only runs on the tab you click, when you click it.
 
 **Graphics:**
 
@@ -45,12 +47,14 @@ Copy-paste material for the [Developer Dashboard](https://chrome.google.com/webs
 
 **Single purpose:**
 
-> Animate a rebuild of the current web page: when the user clicks the icon, the page is replaced by a canvas on which animated cursors redraw its layout, text and images.
+> Animate a rebuild of the current web page: when the user clicks the icon (or, if they opt in, when a page loads), the page is replaced by a canvas on which animated cursors redraw its layout, text and images.
 
 **Permission justifications:**
 
 - `activeTab`: Needed to run on the page the user explicitly invokes the extension on, and to capture that tab once so canvases, videos and iframes can be redrawn. No access to any other tab or site.
 - `scripting`: Needed to inject the bundled animation script into the active tab, and to briefly apply CSS that leaves only media visible for the one screenshot.
+- `storage`: Remembers the user's automatic-play setting (off, chosen sites, or every site) on the device.
+- Optional host permissions (`<all_urls>`): Requested at runtime only if the user turns on automatic play in Options, either for every site or for specific sites they list. Used to start the animation when those pages load and, for every site, to take the same media screenshot without a click. Never requested by default, and removed when the user switches back to click-only.
 
 **Remote code:** No. All JavaScript is included in the package.
 

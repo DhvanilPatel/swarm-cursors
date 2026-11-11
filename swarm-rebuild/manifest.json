@@ -19,7 +19,9 @@
     "128": "icons/icon128.png"
   },
   "background": { "service_worker": "background.js" },
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["<all_urls>"],
+  "options_ui": { "page": "options.html", "open_in_tab": false },
   "commands": {
     "_execute_action": {
       "suggested_key": { "default": "Alt+Shift+S", "mac": "Alt+Shift+S" },

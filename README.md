@@ -36,6 +36,7 @@ The store version can lag behind this repo while an update is in review. To run 
 - **Hide** hides the toolbar for clean screen recordings (or press **H**). Move your mouse to the bottom of the screen or press **H** again to show it.
 - When it's done, the cursors flock to your mouse. **Go live** fades back to the real, clickable page; **Replay** builds it again.
 - **Esc**, **✕**, or clicking the icon again exits at any time.
+- **Play automatically** (off by default): right-click the icon → **Options** and choose *on sites I choose* or *on every site*. Chrome asks you to allow access to those sites first, and switching back to *Only when I click* gives that access up.
 
 There's a self-contained test page in [`demo/index.html`](demo/index.html) (an inner-scrolling app shell with floats, forms, cards and media). Opening local files needs **Allow access to file URLs** enabled for the extension.
 
@@ -66,9 +67,11 @@ There's a self-contained test page in [`demo/index.html`](demo/index.html) (an i
 
 | Path | What it is |
 | --- | --- |
-| `swarm-rebuild/manifest.json` | Manifest V3; permissions are `activeTab` and `scripting` only |
+| `swarm-rebuild/manifest.json` | Manifest V3; permissions are `activeTab`, `scripting` and `storage`. Site access is optional and only requested if you turn on automatic play |
 | `swarm-rebuild/background.js` | Toolbar click → media-only screenshot → inject `swarm.js` (or toggle off) |
 | `swarm-rebuild/swarm.js` | Snapshot, renderer and swarm engine (one dependency-free content script) |
+| `swarm-rebuild/options.html`, `options.js` | Automatic play setting |
+| `swarm-rebuild/autoplay.js` | Tiny loader registered only on the sites where automatic play is on |
 | `demo/index.html` | Edge-case test page |
 | `store/` | Chrome Web Store listing copy, screenshots and promo tile |
 | `scripts/package.sh` | Builds the zip to upload to the Web Store |
@@ -79,6 +82,7 @@ There's a self-contained test page in [`demo/index.html`](demo/index.html) (an i
 - It's a visual rebuild, not a clone. Animations freeze at the moment you click, decorative pseudo-elements are skipped when their position can't be worked out, and canvases, videos and iframes below the first screen become placeholders.
 - Web components are rebuilt as plain styled elements, so none of the page's scripts run inside the swarm's layer.
 - Very long pages are capped at about 4,000 layers / 40,000px.
+- When the swarm starts by itself on a site you chose (rather than on every site), canvases, videos and embedded frames become placeholders: Chrome only allows the screenshot after a click, or with access to all sites.
 
 ## Publishing
 
