@@ -1,0 +1,30 @@
+{
+  "name": "swarm-cursors-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "scripts": {
+    "build": "pnpm run build:core && pnpm run build:react && pnpm run build:next && pnpm --filter swarm-cursors run build:subpaths",
+    "build:core": "pnpm --filter swarm-cursors run build",
+    "build:react": "pnpm --filter @swarm-cursors/react run build",
+    "build:next": "pnpm --filter @swarm-cursors/next run build",
+    "typecheck": "pnpm run build:core && pnpm -r run typecheck",
+    "test": "pnpm run build && vitest run",
+    "test:watch": "vitest",
+    "pack:core": "pnpm --filter swarm-cursors pack",
+    "publish:core": "pnpm --filter swarm-cursors publish",
+    "playground": "python3 -m http.server 4173"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "esbuild": "latest",
+    "jsdom": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

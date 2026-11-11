@@ -1,0 +1,46 @@
+{
+  "name": "swarm-cursors",
+  "version": "0.1.0",
+  "description": "Reconstruct a live DOM with a coordinated swarm of animated cursors.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "require": "./dist/react.cjs"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "import": "./dist/next.js",
+      "require": "./dist/next.cjs"
+    }
+  },
+  "scripts": {
+    "build": "pnpm exec tsc --project tsconfig.json --emitDeclarationOnly --declaration --declarationMap --outDir dist/types && pnpm exec esbuild src/index.ts --bundle --platform=browser --target=es2020 --format=esm --minify --sourcemap --outfile=dist/index.js && pnpm exec esbuild src/index.ts --bundle --platform=browser --target=es2020 --format=cjs --minify --sourcemap --outfile=dist/index.cjs",
+    "build:subpaths": "node ../../scripts/build-subpaths.mjs",
+    "prepack": "pnpm run build && pnpm run build:subpaths",
+    "typecheck": "pnpm exec tsc --project tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
