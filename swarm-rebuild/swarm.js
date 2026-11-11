@@ -1619,13 +1619,18 @@
     constructor(env) {
       this.env = env;
       this.frozen = null;
-      for (const old of document.querySelectorAll("swarm-rebuild")) old.remove();
-      const host = document.createElement("swarm-rebuild");
+      // (<swarm-rebuild> is the old host tag; an instance orphaned by an extension update can leave one behind)
+      for (const old of document.querySelectorAll("swarm-rebuild, [data-swarm-rebuild]")) old.remove();
+      // The overlay holds screenshot crops of cross-origin iframes and video, which the page's own
+      // scripts must never be able to read back. So: a closed shadow root, on a plain <div> rather
+      // than a custom tag (a page could define that tag and reach a closed root via ElementInternals).
+      const host = document.createElement("div");
+      host.setAttribute("data-swarm-rebuild", "");
       host.style.cssText =
         "all:initial !important;position:fixed !important;inset:0 !important;z-index:2147483647 !important;display:block !important;pointer-events:auto !important;contain:strict !important;opacity:1;transition:opacity .6s ease;";
       env.host = host;
       this.host = host;
-      const root = host.attachShadow({ mode: "open" });
+      const root = host.attachShadow({ mode: "closed" });
       this.root = root;
       root.innerHTML = `<style>${STYLE}</style>
 <div class="bg"></div>
@@ -3734,6 +3739,12 @@
         if (reveal) this.sfx.release();
         this.sfx.close(reveal ? 1.4 : 0.25);
       }
+      if (!this.view) {
+        // startup failed before the overlay existed
+        this.dead = true;
+        cancelAnimationFrame(this.raf);
+        return;
+      }
       const finish = () => {
         this.dead = true;
         cancelAnimationFrame(this.raf);
@@ -3784,14 +3795,24 @@
 
   function start() {
     if (app) return;
-    app = new App();
-    app.run().catch((err) => console.error("[swarm-rebuild]", err));
+    const a = (app = new App());
+    a.run().catch((err) => {
+      console.error("[swarm-rebuild]", err);
+      // A failed start must not leave the page hidden, an invisible overlay over it, or a
+      // half-started app that makes the next click "toggle off" instead of starting again.
+      unhidePage();
+      if (app === a) stop(false);
+    });
   }
 
   function stop(reveal) {
     if (!app) return;
     const a = app;
     app = null;
+    // Session over: the next click must take a fresh screenshot, never reuse this one
+    // (or one a failed start never consumed). Replay goes through restart(), which keeps it.
+    lastShot = null;
+    window.__swarmShot = null;
     a.destroy(reveal);
   }
 

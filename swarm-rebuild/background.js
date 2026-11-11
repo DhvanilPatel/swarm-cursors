@@ -56,6 +56,20 @@ async function rebuild(tab) {
       }
     }
     await chrome.scripting.executeScript({ target, files: ["swarm.js"] });
+    if (hidden) {
+      // swarm.js unhides the page itself once its canvas covers it, and on a failed start.
+      // If it never got that far (e.g. it threw while loading), put the page back here.
+      const [check] = await chrome.scripting.executeScript({
+        target,
+        func: () => {
+          if (window.__swarmRebuild && window.__swarmRebuild.app) return true;
+          window.__swarmShot = null;
+          window.__swarmHidden = false;
+          return false;
+        },
+      });
+      if (!(check && check.result)) await chrome.scripting.removeCSS({ target, css: MEDIA_ONLY_CSS }).catch(() => {});
+    }
   } catch (err) {
     if (hidden) await chrome.scripting.removeCSS({ target, css: MEDIA_ONLY_CSS }).catch(() => {});
     // chrome://, the Web Store, PDFs and other protected pages can't be scripted.
