@@ -1058,7 +1058,8 @@
       let posd = ctx.posd;
       const pos = cs.position;
       if (pos === "fixed" && layer !== "over") {
-        layer = "over";
+        // a negative z-index (at the root stacking context) paints behind the page, e.g. full-screen WebGL backdrops
+        layer = ctx.zTop == null && parseInt(cs.zIndex, 10) < 0 ? "under" : "over";
         clip = viewClip;
       } else if (pos === "sticky" && layer === "world") {
         // stuck (or sitting exactly where it would stick) at the top of its scroller
