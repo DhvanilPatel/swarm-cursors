@@ -8,7 +8,7 @@ Copy-paste material for the [Developer Dashboard](https://chrome.google.com/webs
 
 **Summary** (132 characters max):
 
-> Wipe any page to a blank canvas and watch a swarm of multiplayer cursors rebuild it, live.
+> Wipe any page to a blank canvas and watch a swarm of colorful pig cursors rebuild it, live.
 
 **Category:** Fun (alternative: Developer Tools)
 
@@ -16,7 +16,7 @@ Copy-paste material for the [Developer Dashboard](https://chrome.google.com/webs
 
 **Description:**
 
-> Click the icon on any website and the page fades to nothing. A swarm of colorful multiplayer cursors gathers around the site's logo, then gets to work rebuilding it piece by piece, the way a design team would in a design tool:
+> Click the icon on any website and the page fades to nothing. A swarm of colorful pig-emoji cursors gathers around the site's logo, then gets to work rebuilding it piece by piece, the way a design team would in a design tool:
 >
 > • Boxes dragged out with a crosshair and a live size badge, then filled in
 > • Headlines and paragraphs typed out with a blinking caret

@@ -1,6 +1,6 @@
 # Swarm Rebuild
 
-A Chrome extension that wipes any web page to a blank canvas and lets a swarm of multiplayer cursors build it back, live: crosshair-drawn boxes, typed text, pen-tool lines, ruler guides and ⌥-drag duplicates, until the page looks just like it did before.
+A Chrome extension that wipes any web page to a blank canvas and lets a swarm of colorful pig-emoji cursors build it back, live: crosshair-drawn boxes, typed text, pen-tool lines, ruler guides and ⌥-drag duplicates, until the page looks just like it did before.
 
 ![Swarm Rebuild rebuilding a page](media/demo.webp)
 
@@ -28,7 +28,7 @@ The store version can lag behind this repo while an update is in review. To run 
 ## Use
 
 - Click the toolbar icon or press **Alt+Shift+S** on any page.
-- The page fades out and the cursors orbit the site's favicon, then fan out and start building.
+- The page fades out and the colorful pig cursors orbit the site's favicon, then fan out and start building. Each pig keeps a stable accent color, shown as a badge behind the emoji.
 - **Scroll** and the swarm chases you, with more agents joining the faster you go.
 - **Tour** auto-scrolls at the pace the swarm can keep up with. Good for screen recordings.
 - **1× / 2× / 3×** changes build speed.
