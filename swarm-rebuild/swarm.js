@@ -3487,6 +3487,9 @@
 
     setHudHidden(hidden) {
       this.hudHidden = hidden;
+      // see pointermove: not armed if the pointer is already in the bottom strip (e.g. it just clicked Hide)
+      const m = this.engine && this.engine.mouse;
+      this.pillArmed = !(m && m.y >= window.innerHeight - 44);
       if (this.view) {
         this.view.hud.classList.toggle("hidden", hidden);
         if (this.view.unhideBtn) {
@@ -3607,22 +3610,33 @@
       on(window, "pointermove", (e) => {
         this.engine.mouse = { x: e.clientX, y: e.clientY };
         if (this.hudHidden && this.view.unhideBtn) {
+          // The strip overlaps where the toolbar was, so wait until the pointer has left it once:
+          // otherwise clicking Hide puts "Show controls" right back under the cursor.
           const nearBottom = e.clientY >= window.innerHeight - 44;
-          this.view.unhideBtn.classList.toggle("visible", nearBottom);
+          if (!nearBottom) this.pillArmed = true;
+          this.view.unhideBtn.classList.toggle("visible", nearBottom && this.pillArmed);
         }
       }, { passive: true });
       on(document.documentElement, "pointerleave", () => {
         this.engine.mouse = null;
+        if (this.view.unhideBtn) this.view.unhideBtn.classList.remove("visible");
       });
       on(window, "keydown", (e) => {
         if (e.key === "Escape") {
           e.stopPropagation();
           stop(false);
         } else if ((e.key === "m" || e.key === "M") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-          this.sfx.setOn(!this.sfx.on);
-          this.renderSoundBtn();
+          // ours while the swarm covers the page: don't also type into a field the page had focused
+          e.preventDefault();
+          e.stopPropagation();
+          if (!e.repeat) {
+            this.sfx.setOn(!this.sfx.on);
+            this.renderSoundBtn();
+          }
         } else if ((e.key === "h" || e.key === "H") && !e.metaKey && !e.ctrlKey && !e.altKey) {
-          this.toggleHud();
+          e.preventDefault();
+          e.stopPropagation();
+          if (!e.repeat) this.toggleHud(); // holding H mustn't flicker it
         }
         this.unlockSound();
       }, true);
@@ -3750,7 +3764,7 @@
 
     onComplete() {
       this.complete = true;
-      if (this.hudHidden) this.setHudHidden(false);
+      // a hidden toolbar stays hidden so the end of a recording stays clean (H or the bottom edge brings it back)
       if (this.sfx) this.sfx.finale();
       const E = this.engine;
       const v = this.view;
