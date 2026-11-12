@@ -513,6 +513,12 @@
     let portKey = null;
     const html = document.documentElement;
     const body = document.body;
+    // A fixed backdrop painted under the page (negative z-index) shows through wherever nothing
+    // covers it, so a box in the page's own colour is no longer invisible: it hides the backdrop.
+    const underlay = [...document.querySelectorAll("*")].some((el) => {
+      const cs = css(el);
+      return cs.position === "fixed" && parseInt(cs.zIndex, 10) < 0 && cs.display !== "none";
+    });
 
     const conv = (r, layer) =>
       layer === "world"
@@ -710,7 +716,8 @@
       const tag = el.localName;
       const bgc = cs.backgroundColor;
       const bgi = cs.backgroundImage;
-      const bgVisible = (alphaOf(bgc) > 0.01 && !sameColor(bgc, pageBg.color)) || bgi !== "none";
+      const pageColored = !underlay && sameColor(bgc, pageBg.color);
+      const bgVisible = (alphaOf(bgc) > 0.01 && !pageColored) || bgi !== "none";
       if (el === body && pageBg.from === body) return null;
       const sides = ["top", "right", "bottom", "left"].map((s) => {
         const w = parseFloat(cs.getPropertyValue(`border-${s}-width`)) || 0;
@@ -728,7 +735,7 @@
         lineItem([{ x: b.x, y }, { x: b.x + b.w, y }], c, Math.max(1, Math.min(b.h, 2)), null, ctx, key);
         return null;
       }
-      const sameAsPage = alphaOf(bgc) > 0.01 && sameColor(bgc, pageBg.color) && bgi === "none";
+      const sameAsPage = alphaOf(bgc) > 0.01 && pageColored && bgi === "none";
       if (!forceRect && !bgVisible && !shadow && !backdrop) {
         if (nb === 0) return null;
         if (nb < 4) {
