@@ -3478,6 +3478,7 @@
       this.tour = false;
       this.tourV = 0;
       this.tourAcc = 0;
+      this.buildFrontY = 0;
       this.speeds = [1, 2, 3];
       this.speedIx = 0;
       this.complete = false;
@@ -3663,7 +3664,11 @@
           this.tour = !this.tour;
           b.classList.toggle("on", this.tour);
           b.textContent = this.tour ? "Touring" : "Tour";
-          if (this.tour) this.engine.start();
+          if (this.tour) {
+            this.tourV = 0;
+            this.tourAcc = 0;
+            if (this.engine.ready) this.engine.start();
+          }
         } else if (a === "sound") {
           if (this.sfx.on && this.sfx.blocked) this.sfx.resume();
           else this.sfx.setOn(!this.sfx.on);
@@ -3721,19 +3726,46 @@
       if (!E.started) return;
       const g = this.env.geom();
       const maxY = this.env.scrollHeight() - g.vh;
-      if (g.sy >= maxY - 1) {
+      if (maxY <= 0 || g.sy >= maxY - 0.5) {
         this.tourV = 0;
         return;
       }
-      const crew = Math.max(MIN_AGENTS, E.cursors.filter((c) => !c.leaving).length);
-      const backlog = E.backlog();
-      const target = backlog <= Math.max(4, crew * 0.6) ? 230 : backlog <= crew * 1.5 ? 80 : 0;
-      this.tourV += (target - this.tourV) * Math.min(1, dt * 2.5);
-      this.tourAcc += this.tourV * dt;
-      if (this.tourAcc >= 1) {
-        const d = Math.floor(this.tourAcc);
-        this.tourAcc -= d;
-        this.env.scrollBy(d);
+
+      // 1. Determine active construction position in world space
+      const activeTasks = E.cursors
+        .filter((c) => c.task && c.task.layer === "world")
+        .map((c) => c.task.y);
+
+      if (activeTasks.length > 0) {
+        const sum = activeTasks.reduce((a, b) => a + b, 0);
+        const avgY = sum / activeTasks.length;
+        this.buildFrontY = Math.max(this.buildFrontY || 0, avgY);
+      } else {
+        const nextTask = E.tasks.find((t) => t.layer === "world" && t.state !== "done");
+        if (nextTask) {
+          this.buildFrontY = Math.max(this.buildFrontY || 0, nextTask.y);
+        }
+      }
+
+      // 2. Sweet spot target: anchor active build front at ~60% of viewport height
+      // (comfortably below the absolute center, well above the bottom edge)
+      const targetFocus = g.vh * 0.60;
+      const targetSy = clamp((this.buildFrontY || 0) - targetFocus, 0, maxY);
+
+      // 3. Smooth camera pursuit toward targetSy
+      const diff = targetSy - g.sy;
+      if (diff > 0.5) {
+        const desiredV = clamp(diff * 3.2, 20, 500 * E.speed);
+        this.tourV += (desiredV - this.tourV) * Math.min(1, dt * 4.0);
+        this.tourAcc += this.tourV * dt;
+        if (this.tourAcc >= 1) {
+          const d = Math.floor(this.tourAcc);
+          this.tourAcc -= d;
+          this.env.scrollBy(d);
+        }
+      } else {
+        this.tourV = Math.max(0, this.tourV * Math.exp(-dt * 6.0));
+        this.tourAcc = 0;
       }
     }
 
