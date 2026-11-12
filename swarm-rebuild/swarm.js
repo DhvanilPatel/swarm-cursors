@@ -513,6 +513,12 @@
     let portKey = null;
     const html = document.documentElement;
     const body = document.body;
+    // A fixed backdrop painted under the page (negative z-index) shows through wherever nothing
+    // covers it, so a box in the page's own colour is no longer invisible: it hides the backdrop.
+    const underlay = [...document.querySelectorAll("*")].some((el) => {
+      const cs = css(el);
+      return cs.position === "fixed" && parseInt(cs.zIndex, 10) < 0 && cs.display !== "none";
+    });
 
     const conv = (r, layer) =>
       layer === "world"
@@ -710,7 +716,8 @@
       const tag = el.localName;
       const bgc = cs.backgroundColor;
       const bgi = cs.backgroundImage;
-      const bgVisible = (alphaOf(bgc) > 0.01 && !sameColor(bgc, pageBg.color)) || bgi !== "none";
+      const pageColored = !underlay && sameColor(bgc, pageBg.color);
+      const bgVisible = (alphaOf(bgc) > 0.01 && !pageColored) || bgi !== "none";
       if (el === body && pageBg.from === body) return null;
       const sides = ["top", "right", "bottom", "left"].map((s) => {
         const w = parseFloat(cs.getPropertyValue(`border-${s}-width`)) || 0;
@@ -728,7 +735,7 @@
         lineItem([{ x: b.x, y }, { x: b.x + b.w, y }], c, Math.max(1, Math.min(b.h, 2)), null, ctx, key);
         return null;
       }
-      const sameAsPage = alphaOf(bgc) > 0.01 && sameColor(bgc, pageBg.color) && bgi === "none";
+      const sameAsPage = alphaOf(bgc) > 0.01 && pageColored && bgi === "none";
       if (!forceRect && !bgVisible && !shadow && !backdrop) {
         if (nb === 0) return null;
         if (nb < 4) {
@@ -1041,7 +1048,13 @@
       }
       const op = ctx.op * parseFloat(cs.opacity);
       if (!(op > 0.03)) return;
-      const r = el.getBoundingClientRect();
+      let r = el.getBoundingClientRect();
+      // <picture> is inline by default, so when its <img> is out of flow (position:absolute cover
+      // images) the picture's own box is empty: the <img> is what is on screen.
+      if (tag === "picture" && (r.width < 1 || r.height < 1)) {
+        const im = el.querySelector("img");
+        if (im) r = im.getBoundingClientRect();
+      }
       // "visually hidden" accessibility text: 1px boxes, clip:rect(0 0 0 0), clip-path:inset(50%)
       // (html/body overflow belongs to the viewport, so a 0px-tall body clips nothing)
       const clipsSelf = el !== html && el !== body && el !== env.scroller && cs.overflowX !== "visible" && cs.overflowY !== "visible";
@@ -1058,7 +1071,8 @@
       let posd = ctx.posd;
       const pos = cs.position;
       if (pos === "fixed" && layer !== "over") {
-        layer = "over";
+        // a negative z-index (at the root stacking context) paints behind the page, e.g. full-screen WebGL backdrops
+        layer = ctx.zTop == null && parseInt(cs.zIndex, 10) < 0 ? "under" : "over";
         clip = viewClip;
       } else if (pos === "sticky" && layer === "world") {
         // stuck (or sitting exactly where it would stick) at the top of its scroller
