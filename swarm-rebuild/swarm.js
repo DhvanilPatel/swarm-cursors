@@ -1041,7 +1041,13 @@
       }
       const op = ctx.op * parseFloat(cs.opacity);
       if (!(op > 0.03)) return;
-      const r = el.getBoundingClientRect();
+      let r = el.getBoundingClientRect();
+      // <picture> is inline by default, so when its <img> is out of flow (position:absolute cover
+      // images) the picture's own box is empty: the <img> is what is on screen.
+      if (tag === "picture" && (r.width < 1 || r.height < 1)) {
+        const im = el.querySelector("img");
+        if (im) r = im.getBoundingClientRect();
+      }
       // "visually hidden" accessibility text: 1px boxes, clip:rect(0 0 0 0), clip-path:inset(50%)
       // (html/body overflow belongs to the viewport, so a 0px-tall body clips nothing)
       const clipsSelf = el !== html && el !== body && el !== env.scroller && cs.overflowX !== "visible" && cs.overflowY !== "visible";
