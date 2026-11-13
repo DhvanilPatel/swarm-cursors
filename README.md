@@ -88,6 +88,12 @@ There's a self-contained test page in [`demo/index.html`](demo/index.html) (an i
 
 `./scripts/package.sh` writes `dist/swarm-rebuild-<version>.zip` for the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole). Listing text, permission justifications and assets are in [`store/`](store), and the privacy policy is [`PRIVACY.md`](PRIVACY.md).
 
+## Development checks
+
+Run `npm ci` and `npm test` with Node.js 18 or newer. The tests exercise the production SVG clone code in a DOM simulation, including nested symbols (such as a bicycle referencing two wheels), gradient dependencies, repeated instances and cyclic references. Test dependencies are only used for development; the extension remains dependency-free.
+
+After changing the extension, reload it on the browser's Extensions page, refresh the target web page, then start a new rebuild. Refreshing the page clears the previously injected script and snapshot.
+
 ## License
 
 None yet. The original Swarm site is published without a license and this project adapts parts of it, so please don't reuse this code without checking with [Joel Califa](https://joelcalifa.com) as well.

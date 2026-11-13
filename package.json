@@ -1,0 +1,10 @@
+{
+  "name": "swarm-rebuild-checks",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/svg-refs.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  }
+}
