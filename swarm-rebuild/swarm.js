@@ -260,7 +260,7 @@
     if (a) dst.appendChild(a);
   }
 
-  function prepClone(src, dst) {
+  function prepClone(src, dst, svgRefs) {
     const tag = src.localName;
     if (DROP_IN_CLONE.has(tag)) {
       dst.remove();
@@ -288,7 +288,7 @@
       dst.setAttribute("src", imgSrc(src));
       dst.setAttribute("decoding", "async");
     }
-    if (tag === "svg") fixSvgRefs(src, dst);
+    if (tag === "svg") fixSvgRefs(src, dst, svgRefs);
     // Clones live in the page's document: custom elements would be upgraded by the
     // site's own JS (and often wipe their content), media would play. Swap in inert stand-ins.
     if (tag === "audio") {
@@ -326,12 +326,12 @@
   let inertDoc = null;
   const inert = () => inertDoc || (inertDoc = document.implementation.createHTMLDocument(""));
 
-  function cloneStyled(src) {
+  function cloneStyled(src, svgRefs) {
     const dst = inert().importNode(src, true);
     const a = [...src.querySelectorAll("*")];
     const b = [...dst.querySelectorAll("*")];
-    const root = prepClone(src, dst) || document.createElement("span");
-    for (let i = 0; i < a.length && i < b.length; i++) prepClone(a[i], b[i]);
+    const root = prepClone(src, dst, svgRefs) || document.createElement("span");
+    for (let i = 0; i < a.length && i < b.length; i++) prepClone(a[i], b[i], svgRefs);
     return root;
   }
 
@@ -354,12 +354,22 @@
 
   // Shadow trees can't see document-level <symbol>/<linearGradient> ids, so
   // inline anything the clone references.
-  function fixSvgRefs(src, dst) {
+  function fixSvgRefs(src, dst, ancestors = new Set()) {
+    const scope = src.getRootNode();
+    const findRef = (id) => (scope.getElementById && scope.getElementById(id)) || document.getElementById(id);
     for (const u of dst.querySelectorAll("use")) {
       const href = u.getAttribute("href") || u.getAttribute("xlink:href");
       if (!href || href[0] !== "#") continue;
-      const ref = document.getElementById(href.slice(1));
+      const ref = findRef(href.slice(1));
       if (!ref) continue;
+      // Track only this reference path: two wheels may share a symbol, while
+      // a self-reference (including one inside a nested <svg>) must terminate.
+      if (ancestors.has(ref)) {
+        u.remove();
+        continue;
+      }
+      const next = new Set(ancestors);
+      next.add(ref);
       const isSym = ref.localName === "symbol";
       const g = document.createElementNS(SVGNS, isSym ? "svg" : "g");
       if (isSym) {
@@ -379,24 +389,38 @@
           g.appendChild(ch.cloneNode(true));
           continue;
         }
-        g.appendChild(cloneStyled(ch));
+        g.appendChild(cloneStyled(ch, next));
       }
+      // querySelectorAll above is a snapshot. Newly inserted <use> elements
+      // (e.g. bicycle -> wheel) need their own pass before entering the shadow tree.
+      fixSvgRefs(ref, g, next);
       u.replaceWith(g);
     }
-    const html = dst.outerHTML;
     const ids = new Set();
-    html.replace(/url\(\s*["']?#([^"')\s]+)["']?\s*\)/g, (_, id) => ids.add(id));
+    function collectRefs(node) {
+      node.outerHTML.replace(/url\(\s*["']?#([^"')\s]+)["']?\s*\)/g, (_, id) => ids.add(id));
+      for (const el of [node, ...node.querySelectorAll("*")]) {
+        if (el.namespaceURI !== SVGNS || el.localName === "a") continue;
+        const href = el.getAttribute("href") || el.getAttribute("xlink:href");
+        if (href && href[0] === "#") ids.add(href.slice(1));
+      }
+    }
+    collectRefs(dst);
     if (!ids.size) return;
     let defs = null;
     for (const id of ids) {
       if (dst.querySelector(`[id="${CSS.escape(id)}"]`)) continue;
-      const ref = document.getElementById(id);
+      const ref = findRef(id);
       if (!ref) continue;
       if (!defs) {
         defs = document.createElementNS(SVGNS, "defs");
         dst.insertBefore(defs, dst.firstChild);
       }
-      defs.appendChild(ref.cloneNode(true));
+      const copy = ref.cloneNode(true);
+      defs.appendChild(copy);
+      // Paint servers may themselves inherit another gradient or reference a
+      // mask/filter. A growing Set visits each dependency once, even in cycles.
+      collectRefs(copy);
     }
   }
 
