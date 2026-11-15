@@ -2306,6 +2306,20 @@
       return n;
     }
 
+    // A small backlog can still contain a heading that is being typed at the
+    // top of the viewport. Keep its start visible until that work completes.
+    // Blocked dependencies are excluded: their master may need a later viewport.
+    tourCeiling(scrollY, viewportHeight, maxY) {
+      let ceiling = maxY;
+      for (const t of this.tasks) {
+        if (t.layer !== "world" || t.state === "done" || t.gate > this.frontier) continue;
+        if (t.y >= scrollY + viewportHeight) continue;
+        if (t.state !== "active" && !t.deps.every((d) => d.state === "done")) continue;
+        ceiling = Math.min(ceiling, Math.max(scrollY, t.y - 48));
+      }
+      return ceiling;
+    }
+
     step(dt) {
       dt = Math.min(dt, 0.05);
       this.time += dt;
@@ -3721,8 +3735,10 @@
       if (!E.started) return;
       const g = this.env.geom();
       const maxY = this.env.scrollHeight() - g.vh;
-      if (g.sy >= maxY - 1) {
+      const ceiling = E.tourCeiling(g.sy, g.vh, maxY);
+      if (g.sy >= ceiling - 1) {
         this.tourV = 0;
+        this.tourAcc = 0;
         return;
       }
       const crew = Math.max(MIN_AGENTS, E.cursors.filter((c) => !c.leaving).length);
@@ -3733,7 +3749,7 @@
       if (this.tourAcc >= 1) {
         const d = Math.floor(this.tourAcc);
         this.tourAcc -= d;
-        this.env.scrollBy(d);
+        this.env.scrollBy(Math.min(d, Math.max(0, Math.floor(ceiling - g.sy))));
       }
     }
 

@@ -30,7 +30,7 @@ The store version can lag behind this repo while an update is in review. To run 
 - Click the toolbar icon or press **Alt+Shift+S** on any page.
 - The page fades out and the cursors orbit the site's favicon, then fan out and start building.
 - **Scroll** and the swarm chases you, with more agents joining the faster you go.
-- **Tour** auto-scrolls at the pace the swarm can keep up with. Good for screen recordings.
+- **Tour** auto-scrolls at the pace the swarm can keep up with, keeping unfinished work visible until its cursor is done. Good for screen recordings.
 - **1× / 2× / 3×** changes build speed.
 - **Sound** is on by default (🔊 in the toolbar, or press **M**). If the page hasn't been clicked yet, Chrome keeps audio locked and the button says **Tap for sound**; one click anywhere starts it.
 - **Hide** hides the toolbar for clean screen recordings (or press **H**). Move your mouse to the bottom of the screen or press **H** again to show it.
@@ -83,6 +83,16 @@ There's a self-contained test page in [`demo/index.html`](demo/index.html) (an i
 - Web components are rebuilt as plain styled elements, so none of the page's scripts run inside the swarm's layer.
 - Very long pages are capped at about 4,000 layers / 40,000px.
 - When the swarm starts by itself on a site you chose (rather than on every site), canvases, videos and embedded frames become placeholders: Chrome only allows the screenshot after a click, or with access to all sites.
+
+## Tests
+
+Run the dependency-free Tour regression tests with Node.js:
+
+```sh
+node --test scripts/tour.test.mjs
+```
+
+They cover unfinished headings, scroll inertia, blocked dependencies, fixed UI and inner scrollers.
 
 ## Publishing
 
