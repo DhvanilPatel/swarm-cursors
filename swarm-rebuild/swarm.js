@@ -570,6 +570,7 @@
     function rootStyle(cs, isRun) {
       let s = styleString(cs, TEXT_PROPS);
       if (isRun) return s + "display:block;padding:0;margin:0;box-sizing:border-box;width:100%;height:100%;position:relative;";
+      s += styleString(cs, ["transform", "transform-origin"]);
       const pad = (side) =>
         (parseFloat(cs.getPropertyValue(`padding-${side}`)) || 0) + (parseFloat(cs.getPropertyValue(`border-${side}-width`)) || 0);
       let d = cs.display;
